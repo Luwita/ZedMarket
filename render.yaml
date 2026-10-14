@@ -34,8 +34,9 @@ services:
       # The value is kept in Render (Environment), not here, because this repository is public.
       - key: ADMIN_EMAILS
         sync: false
-      # Test mode is off: sign-in codes go only by SMS. "1" would also show them on screen (testing only;
-      # never staff or owner codes). Set explicitly, because removing a key here doesn't remove it on Render.
+      # Test mode is on while no SMS provider is paid for: phone codes are shown on screen (never staff or
+      # owner codes; those are only in the server log). "0" sends codes only by SMS. Set explicitly, because
+      # removing a key here doesn't remove it on Render.
       - key: SHOW_SIGNIN_CODES
         value: "0"
       # Email (Resend): password-reset and other emailed codes. EMAIL_FROM must be on a domain verified in Resend.

@@ -312,6 +312,10 @@ export function neonAuthWebhook(
       }
       return res.json({ ok: true });
     }
+    if (sms.provider === 'console' && !exposeCodes) {
+      console.warn(`[auth] an SMS code for 0${to} was not sent: no SMS provider is set up (AT_USERNAME, AT_API_KEY)`);
+      throw new HttpError(503, 'SMS codes are not available yet');
+    }
     try {
       await sms.send(to, `Your Zed Market code is ${code}. It expires in 5 minutes.`);
     } catch (err) {

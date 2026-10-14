@@ -171,6 +171,22 @@ describe('sign-in codes from Neon Auth', () => {
     }
   });
 
+  test('without test mode or an SMS provider, a texted code fails instead of only reaching the server log', async () => {
+    const app = await start({ sms: consoleSms });
+    try {
+      assert.equal((await app.hook(otp('+260977123456'))).status, 503);
+    } finally {
+      await app.stop();
+    }
+    const testing = await start({ sms: consoleSms, exposeCodes: true });
+    try {
+      assert.equal((await testing.hook(otp('+260977123456', '777888'))).status, 200);
+      assert.deepEqual(await testing.testCode('0977123456'), { code: '777888' });
+    } finally {
+      await testing.stop();
+    }
+  });
+
   test('in test mode the code is shown on screen even when SMS fails, but never an owner\'s', async () => {
     const down = africasTalkingSms({ username: 'zedmarket', apiKey: 'k', fetchImpl: fakeFetch(new Error('offline')) });
     const app = await start({ sms: down, exposeCodes: true });
