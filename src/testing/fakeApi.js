@@ -1011,7 +1011,17 @@ export const admin = {
     log('review removed', 'review', id, reason);
     return { ok: true };
   },
-  users: async () => (staff(), copy(db.users.map((u) => ({ ...u, orderCount: 0, suspended: !!u.suspended })))),
+  users: async () =>
+    (staff(),
+    copy(
+      db.users.map((u) => ({
+        ...u,
+        role: u.admin ? 'owner' : u.staff ? 'staff' : null,
+        shopId: db.shops.find((sh) => sh.ownerId === u.id)?.id ?? null,
+        orderCount: 0,
+        suspended: !!u.suspended,
+      })),
+    )),
   async suspendUser(id, suspended, reason) {
     Object.assign(
       db.users.find((u) => u.id === id),
@@ -1019,6 +1029,17 @@ export const admin = {
     );
     log(suspended ? 'user suspended' : 'user restored', 'user', id, reason);
     return { ok: true };
+  },
+  async deleteUser(id, reason) {
+    owner();
+    const u = db.users.find((x) => x.id === id);
+    if (!u) throw new ApiError(404, 'User not found');
+    if (db.shops.some((sh) => sh.ownerId === id)) throw new ApiError(409, 'Delete the shop under Shops first.');
+    const open = db.orders.filter((o) => o.buyerId === id).flatMap((o) => o.shipments.filter((sh) => ['pending', 'dispatched'].includes(sh.status)));
+    open.forEach((sh) => Object.assign(sh, { status: 'cancelled', cancelledBy: 'admin', cancelReason: "The buyer's account was closed" }));
+    db.users.splice(db.users.indexOf(u), 1);
+    log('user deleted', 'user', id, `${u.name}: ${reason}`);
+    return { ok: true, cancelled: open.length };
   },
   orders: async () => (staff(), copy(db.orders)),
   async cancelShipment(orderId, shopId, reason) {

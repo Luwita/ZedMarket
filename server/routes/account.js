@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireUser } from '../auth.js';
 import { HttpError } from '../http.js';
-import { loadOrders } from '../queries.js';
+import { eraseUser, loadOrders } from '../queries.js';
 
 // The user's rights under Zambia's Data Protection Act: a copy of their data, and deletion.
 // `deleteIdentity(authId)` deletes the person's Neon Auth sign-in when they delete their account.
@@ -56,21 +56,7 @@ export function accountRoutes(db, { deleteIdentity = async () => {} } = {}) {
     );
     if (open) throw new HttpError(409, 'You have orders on the way. You can delete your account once they arrive.');
 
-    await db.tx(async (t) => {
-      await t.query(
-        `UPDATE orders SET buyer_name = 'Deleted user', buyer_phone = '', address = '' WHERE buyer_id = $1`,
-        [id],
-      );
-      await t.query(`UPDATE reviews SET author_name = 'Former customer' WHERE user_id = $1`, [id]);
-      await t.query('DELETE FROM conversations WHERE buyer_id = $1', [id]);
-      await t.query(`UPDATE price_requests SET note = '' WHERE buyer_id = $1`, [id]);
-      // The row keeps its auth_id so a still-valid sign-in token can't recreate the account; the Neon Auth
-      // sign-in itself is deleted below, so the same email can sign up again as a new, unrelated account.
-      await t.query(
-        `UPDATE users SET name = 'Deleted user', phone = NULL, email = NULL, deleted_at = now() WHERE id = $1`,
-        [id],
-      );
-    });
+    await db.tx((t) => eraseUser(t, id));
     if (row.auth_id) await deleteIdentity(row.auth_id);
     res.json({ ok: true });
   });

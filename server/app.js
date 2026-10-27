@@ -75,7 +75,7 @@ export function createApp(
   app.use('/api/banners', bannerRoutes(db));
   // Public: commission rate and voucher amounts, shown in the seller terms and on the invite page.
   app.get('/api/settings', async (_req, res) => res.json(await getSettings(db)));
-  app.use('/api/admin', adminRoutes(db, { adminPhones, sms, exposeCodes, authReady: !!baseUrl }));
+  app.use('/api/admin', adminRoutes(db, { adminPhones, adminEmails, sms, exposeCodes, authReady: !!baseUrl, deleteIdentity }));
   app.use('/api/notifications', notificationRoutes(db));
   app.use('/api/support', supportRoutes(db));
   app.use('/api/buying-requests', buyingRequestRoutes(db));

@@ -4,7 +4,7 @@ import { requireAdmin, requireOwner } from '../auth.js';
 import { HttpError, parse } from '../http.js';
 import { normalizePhone } from '../../src/utils/format.js';
 import { toProduct, toReview } from '../mappers.js';
-import { cancelShipment, loadOrders, logAdmin, refreshRatings, refundableLeft } from '../queries.js';
+import { cancelShipment, eraseUser, loadOrders, logAdmin, refreshRatings, refundableLeft } from '../queries.js';
 import { CASE_SELECT, addReturnRefund, toCase, updateCase } from './cases.js';
 import { notify, notifyShopOwner } from '../notify.js';
 import { shopBalances } from '../payouts.js';
@@ -23,7 +23,11 @@ const search = z.object({
 const like = (q) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 // Zed Market staff tools. Every change is written to the activity log with the staff member and the reason.
-export function adminRoutes(db, { adminPhones = [], adminEmails = [], sms = null, exposeCodes = false, authReady = true } = {}) {
+// `deleteIdentity(authId)` deletes a Neon Auth sign-in when an owner deletes someone's account.
+export function adminRoutes(
+  db,
+  { adminPhones = [], adminEmails = [], sms = null, exposeCodes = false, authReady = true, deleteIdentity = async () => {} } = {},
+) {
   const owners = new Set(adminPhones.map(normalizePhone).filter(Boolean));
   const ownerEmails = new Set(adminEmails.map((e) => e.trim().toLowerCase()).filter(Boolean));
   const isOwner = (u) => (u.phone && owners.has(u.phone)) || (u.email && ownerEmails.has(u.email.toLowerCase()));
@@ -379,6 +383,36 @@ export function adminRoutes(db, { adminPhones = [], adminEmails = [], sms = null
       );
     });
     res.json({ ok: true });
+  });
+
+  // Delete a customer's account for good (owners only), e.g. a fake or abusive account, or at the person's request.
+  // Same as deleting your own account: personal data is removed, past orders stay without naming them, and the
+  // sign-in is deleted. Parcels not yet delivered are cancelled, as they can't reach a deleted account.
+  router.post('/users/:id/delete', requireOwner, async (req, res) => {
+    const { reason: why } = parse(z.object({ reason }), req.body);
+    if (req.params.id === req.user.id) throw new HttpError(400, "You can't delete your own account here");
+    const result = await db.tx(async (t) => {
+      const [target] = await t.query('SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE', [
+        req.params.id,
+      ]);
+      if (!target) throw new HttpError(404, 'User not found');
+      if (isOwner(target) || target.is_staff) {
+        throw new HttpError(403, 'Staff and owner accounts are removed under Staff, or in ADMIN_PHONES on the server');
+      }
+      const [shop] = await t.query('SELECT name FROM shops WHERE owner_id = $1 AND deleted_at IS NULL', [target.id]);
+      if (shop) throw new HttpError(409, `This person owns ${shop.name}. Delete the shop under Shops first.`);
+      const open = await t.query(
+        `SELECT s.order_id, s.shop_id FROM shipments s JOIN orders o ON o.id = s.order_id
+          WHERE o.buyer_id = $1 AND s.status IN ('pending', 'dispatched')`,
+        [target.id],
+      );
+      for (const s of open) await cancelShipment(t, s.order_id, s.shop_id, 'admin', "The buyer's account was closed");
+      await eraseUser(t, target.id);
+      await logAdmin(t, req.user.id, 'user deleted', 'user', target.id, `${target.name}: ${why}`);
+      return { authId: target.auth_id, cancelled: open.length };
+    });
+    if (result.authId) await deleteIdentity(result.authId);
+    res.json({ ok: true, cancelled: result.cancelled });
   });
 
   // ----- Orders -----

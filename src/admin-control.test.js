@@ -209,3 +209,38 @@ test("every shop has its own QR code linking to its shop page", async () => {
   expect(screen.getByRole('link', { name: `${window.location.origin}/store/shop_fans` })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Download poster (PNG)' })).toBeInTheDocument();
 });
+
+test("an owner deletes a customer's account; shop owners and staff can't be deleted there", async () => {
+  api.__signIn({
+    name: 'Mutinta',
+    phone: '0977700700',
+    accountType: 'seller',
+    shop: { id: 'shop_fans', name: 'Mutinta Appliances', province: 'lusaka', town: 'Lusaka', area: 'Cairo Road', phone: '0977700700', couriers: ['pickup'] },
+  });
+  api.__signIn({ name: 'Fake Buyer', phone: '0966777888' });
+  api.__signIn({ name: 'Owner', phone: '0955000000', admin: true });
+
+  renderAt('/admin?tab=users');
+  const row = (await screen.findByText('Fake Buyer')).closest('tr');
+  const seller = screen.getByText('Mutinta').closest('tr');
+  expect(within(seller).queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument();
+  expect(within(screen.getByText('0955000000').closest('tr')).queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument();
+
+  fireEvent.click(within(row).getByRole('button', { name: 'Delete account' }));
+  type('Delete account: reason', 'Fake orders');
+  fireEvent.click(within(row).getByRole('button', { name: 'Confirm' }));
+  expect(await screen.findByText("Fake Buyer's account deleted")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByText('Fake Buyer')).not.toBeInTheDocument());
+  expect(api.__db().users.some((u) => u.name === 'Fake Buyer')).toBe(false);
+});
+
+test('staff do not see Delete account', async () => {
+  api.__signIn({ name: 'Fake Buyer', phone: '0966777888' });
+  api.__signIn({ name: 'Mapalo', phone: '0955111222' });
+  api.__db().users.find((u) => u.name === 'Mapalo').staff = true;
+
+  renderAt('/admin?tab=users');
+  const row = (await screen.findByText('Fake Buyer')).closest('tr');
+  expect(within(row).getByRole('button', { name: 'Suspend' })).toBeInTheDocument();
+  expect(within(row).queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument();
+});

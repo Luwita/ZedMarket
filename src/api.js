@@ -249,6 +249,7 @@ export const admin = {
   removeReview: (id, reason) => request('DELETE', `/admin/reviews/${id}`, { reason }),
   users: (params) => request('GET', `/admin/users?${qs(params)}`),
   suspendUser: (id, suspended, reason) => request('PATCH', `/admin/users/${id}/suspension`, { suspended, reason }),
+  deleteUser: (id, reason) => request('POST', `/admin/users/${id}/delete`, { reason }),
   orders: (params) => request('GET', `/admin/orders?${qs(params)}`),
   cancelShipment: (orderId, shopId, reason) =>
     request('POST', `/admin/orders/${orderId}/shipments/${shopId}/cancel`, { reason }),

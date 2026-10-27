@@ -326,8 +326,16 @@ function Reviews() {
 
 function Users() {
   const [q, setQ] = useState('');
-  const { user } = useStore();
+  const { user, notify } = useStore();
   const { items, run } = useAdminList(() => api.admin.users({ q }), [q]);
+  // Deleting can't be undone, so only owners see it, and only for customers (staff and shop owners are removed
+  // under Staff and Shops). Undelivered parcels of the person are cancelled.
+  const canDelete = user.staffRole === 'owner';
+  const remove = (u, reason) =>
+    run(async () => {
+      const { cancelled } = await api.admin.deleteUser(u.id, reason);
+      if (cancelled) notify(`${cancelled} parcel${cancelled > 1 ? 's' : ''} not yet delivered ${cancelled > 1 ? 'were' : 'was'} cancelled`);
+    }, `${u.name}'s account deleted`);
   return (
     <>
       <SearchBox value={q} onChange={setQ} placeholder="Name or phone number" />
@@ -361,23 +369,33 @@ function Users() {
                 </td>
                 <td className="num">{u.orderCount}</td>
                 <td>
-                  {u.id !== user.id &&
-                    (u.suspended ? (
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => run(() => api.admin.suspendUser(u.id, false), 'Account restored')}
-                      >
-                        Restore
-                      </button>
-                    ) : (
+                  <div className="row-actions">
+                    {u.id !== user.id &&
+                      (u.suspended ? (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => run(() => api.admin.suspendUser(u.id, false), 'Account restored')}
+                        >
+                          Restore
+                        </button>
+                      ) : (
+                        <ReasonButton
+                          label="Suspend"
+                          danger
+                          onConfirm={(reason) =>
+                            run(() => api.admin.suspendUser(u.id, true, reason), 'Account suspended')
+                          }
+                        />
+                      ))}
+                    {canDelete && u.id !== user.id && !u.role && !u.shopId && (
                       <ReasonButton
-                        label="Suspend"
+                        label="Delete account"
+                        placeholder="Why? This can't be undone"
                         danger
-                        onConfirm={(reason) =>
-                          run(() => api.admin.suspendUser(u.id, true, reason), 'Account suspended')
-                        }
+                        onConfirm={(reason) => remove(u, reason)}
                       />
-                    ))}
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

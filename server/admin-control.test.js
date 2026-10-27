@@ -202,3 +202,47 @@ describe('acting for a shop', () => {
     assert.equal((await api('PATCH', url, { status: 'delivered', note: 'x' }, seller.token)).status, 403);
   });
 });
+
+describe('deleting accounts', () => {
+  test('an owner deletes a customer account: open parcels are cancelled and the person is gone', async () => {
+    const spammer = await signIn('0966777888', { name: 'Fake Buyer' });
+    const placed = await api(
+      'POST',
+      '/api/orders',
+      { items: [{ productId: fanId, qty: 1 }], shipping: { ...shipping, name: 'Fake Buyer' }, couriers: { [seller.shopId]: 'pickup' }, payment: 'cod' },
+      spammer.token,
+    );
+    assert.equal(placed.status, 201, JSON.stringify(placed.body));
+
+    assert.equal((await api('POST', `/api/admin/users/${spammer.user.id}/delete`, { reason: '' }, owner.token)).status, 400);
+    const res = await api('POST', `/api/admin/users/${spammer.user.id}/delete`, { reason: 'Fake orders' }, owner.token);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.cancelled, 1);
+
+    assert.equal((await api('GET', '/api/session/me', undefined, spammer.token)).status, 401);
+    const [o] = await db.query('SELECT buyer_name, buyer_phone FROM orders WHERE id = $1', [placed.body.id]);
+    assert.deepEqual(o, { buyer_name: 'Deleted user', buyer_phone: '' });
+    const [s] = await db.query('SELECT status FROM shipments WHERE order_id = $1', [placed.body.id]);
+    assert.equal(s.status, 'cancelled');
+    const users = (await api('GET', '/api/admin/users?q=Fake', undefined, owner.token)).body;
+    assert.equal(users.length, 0);
+    const [logged] = await db.query(`SELECT note FROM admin_actions WHERE action = 'user deleted' AND target_id = $1`, [
+      spammer.user.id,
+    ]);
+    assert.equal(logged.note, 'Fake Buyer: Fake orders');
+  });
+
+  test('staff, shop owners, owners and yourself cannot be deleted this way', async () => {
+    await api('POST', '/api/admin/staff', { phone: '0955246810', name: 'Bwalya' }, owner.token);
+    const staff = await signIn('0955246810');
+    const someone = await signIn('0966135790', { name: 'Mwila' });
+
+    assert.equal((await api('POST', `/api/admin/users/${someone.user.id}/delete`, { reason: 'Test' }, staff.token)).status, 403);
+    assert.equal((await api('POST', `/api/admin/users/${staff.user.id}/delete`, { reason: 'Test' }, owner.token)).status, 403);
+    const shopOwner = await api('POST', `/api/admin/users/${seller.user.id}/delete`, { reason: 'Test' }, owner.token);
+    assert.equal(shopOwner.status, 409);
+    assert.match(shopOwner.body.error, /Delete the shop under Shops first/);
+    assert.equal((await api('POST', `/api/admin/users/${owner.user.id}/delete`, { reason: 'Test' }, owner.token)).status, 400);
+    assert.equal((await api('GET', '/api/session/me', undefined, someone.token)).status, 200);
+  });
+});
