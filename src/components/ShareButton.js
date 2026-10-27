@@ -38,7 +38,7 @@ export default function ShareButton({ title, text = '', path, label = 'Share' })
       {open && (
         <span className="share-menu card" role="menu">
           <a role="menuitem" href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer">
-            💬 WhatsApp
+            WhatsApp
           </a>
           <a
             role="menuitem"
@@ -46,10 +46,10 @@ export default function ShareButton({ title, text = '', path, label = 'Share' })
             target="_blank"
             rel="noreferrer"
           >
-            📘 Facebook
+            Facebook
           </a>
           <button role="menuitem" type="button" onClick={copy}>
-            🔗 Copy link
+            Copy link
           </button>
         </span>
       )}

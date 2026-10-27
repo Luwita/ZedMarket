@@ -168,6 +168,11 @@ test('an owner deletes a shop with a reason, and it leaves the marketplace', asy
   await waitFor(() => expect(screen.queryByRole('link', { name: 'Mutinta Appliances' })).not.toBeInTheDocument());
   expect(api.__db().shops.some((s) => s.id === 'shop_fans')).toBe(false);
   expect(api.__db().notifications[0].title).toBe('Zed Market removed your shop Mutinta Appliances');
+
+  // Without reloading the page, the shop is gone from the list of shops too.
+  fireEvent.click(screen.getAllByRole('link', { name: 'Shops' })[0]);
+  expect(await screen.findByRole('heading', { name: 'Shops across Zambia' })).toBeInTheDocument();
+  expect(screen.queryByText('Mutinta Appliances')).not.toBeInTheDocument();
 });
 
 test('staff confirm a Mobile Money payment for a shop before the parcel can be sent', async () => {

@@ -49,7 +49,7 @@ export function ReasonButton({ label, placeholder = 'Reason', danger = false, on
 // Loads a list and offers a way to run an action then reload.
 // `filters` lists the values the loader depends on; the list reloads when they change.
 export function useAdminList(load, filters) {
-  const { notify } = useStore();
+  const { notify, reloadCatalog } = useStore();
   const [items, setItems] = useState(null);
   const latestLoad = useRef(load);
   latestLoad.current = load;
@@ -70,6 +70,9 @@ export function useAdminList(load, filters) {
       await fn();
       notify(message);
       await reload();
+      // The rest of the app keeps the shop list from when it opened; reload it so a deleted, suspended or newly
+      // approved shop disappears from (or appears on) the Shops page and product pages straight away.
+      reloadCatalog();
       return true;
     } catch (err) {
       notify(err.message);

@@ -6,6 +6,7 @@ import { ProductImage } from '../components/ProductCard';
 import { ProductRow } from '../components/ProductGrid';
 import AskShop from '../components/AskShop';
 import ShareButton from '../components/ShareButton';
+import StatusShare from '../components/StatusShare';
 import { RequestPriceForm } from '../components/PriceRequests';
 import Stars from '../components/Stars';
 import { useStore } from '../context/StoreContext';
@@ -342,6 +343,7 @@ export default function ProductDetail() {
             {shop && <AskShop shop={shop} product={product} />}
             {product.stock >= 2 && <RequestPriceForm product={product} choice={choice} startQty={qty} />}
             <ShareButton title={product.name} text={`${product.name} for ${formatK(price)} on Zed Market`} />
+            {myShop?.id === product.shopId && <StatusShare product={product} className="btn btn-outline" />}
             {myShop && myShop.id !== product.shopId && (
               <Link to={`/seller?tab=add&resell=${product.id}`} className="btn btn-outline btn-sm" title="List this product in your shop">
                 ⇄ Resell in my shop

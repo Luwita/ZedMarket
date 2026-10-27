@@ -19,6 +19,7 @@ import { formatK } from '../utils/format';
 import { mapLink } from '../utils/geo';
 import Icon from '../components/Icon';
 import SideNav from '../components/SideNav';
+import StatusShare from '../components/StatusShare';
 
 // Send several parcels at once, e.g. after one trip to the bus station or courier office.
 function BatchDispatch({ orders }) {
@@ -251,6 +252,7 @@ function ProductList({ result, lowOnly, go }) {
             </div>
           </div>
           <div className="pdp-buttons">
+            <StatusShare product={p} label="Share" />
             <button className="btn btn-outline btn-sm" onClick={() => go({ tab: 'products', edit: p.id })}>
               Edit
             </button>
