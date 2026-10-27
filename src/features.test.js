@@ -143,7 +143,7 @@ test('joining with an invite link gives the new customer a welcome voucher', asy
   await waitFor(() => expect(api.__db().vouchers).toHaveLength(1));
   expect(api.__db().users[1].referredBy).toBe('usr_1');
 
-  fireEvent.click(await screen.findByRole('button', { name: '🎁 Invite & vouchers' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Invite & vouchers' }));
   expect(await screen.findByText('Welcome gift')).toBeInTheDocument();
   expect(screen.getByText('ZM000002')).toBeInTheDocument(); // her own code to share
 });

@@ -301,12 +301,12 @@ export default function Account() {
         <div className="pdp-buttons">
           {user?.isAdmin && (
             <Link to="/admin" className="btn btn-primary">
-              🛡 Admin panel
+              Admin panel
             </Link>
           )}
           {myShop && (
             <Link to="/seller" className="btn btn-primary">
-              🏪 {myShop.name} dashboard
+              {myShop.name} dashboard
             </Link>
           )}
           {user ? (
@@ -329,7 +329,7 @@ export default function Account() {
 
       {user && !user.phone && (
         <section className="card form-card narrow-card phone-card">
-          <h3>📱 Add your phone number</h3>
+          <h3>Add your phone number</h3>
           <p className="muted small">
             We text you about your orders, shops use it to reach you, and you can sign in with a code sent to it.
           </p>
@@ -371,7 +371,7 @@ export default function Account() {
               Price requests
             </button>
             <button className={tab === 'invite' ? 'on' : ''} onClick={() => setParams({ tab: 'invite' })}>
-              🎁 Invite & vouchers
+              Invite & vouchers
             </button>
             <button className={tab === 'privacy' ? 'on' : ''} onClick={() => setParams({ tab: 'privacy' })}>
               Password & privacy
@@ -422,7 +422,7 @@ export default function Account() {
                     </ul>
                     <PayShop order={o} shipment={s} />
                     <ShipmentStatus shipment={s} />
-                    {s.pickupPoint && <p className="small muted">📮 Collect from {s.pickupPoint}</p>}
+                    {s.pickupPoint && <p className="small muted">Collect from {s.pickupPoint}</p>}
                     <ParcelActions order={o} shipment={s} />
                   </div>
                 ))}
@@ -456,7 +456,7 @@ export default function Account() {
           </div>
         ) : (
           <div className="card empty">
-            <p>Tap ♡ on any product to save it here.</p>
+            <p>Tap the heart on any product to save it here.</p>
           </div>
         ))}
     </div>

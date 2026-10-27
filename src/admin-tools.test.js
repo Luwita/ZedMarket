@@ -94,7 +94,7 @@ test('staff pay a shop and the shop sees it in its dashboard', async () => {
 
   api.setToken(sellerToken);
   renderAt('/seller?tab=report');
-  expect(await screen.findByText('💰 Your money')).toBeInTheDocument();
+  expect(await screen.findByText('Your money')).toBeInTheDocument();
   expect(screen.getByText(/MP261004.1530/)).toBeInTheDocument();
   expect(api.__db().notifications[0].title).toBe('Zed Market paid you K475');
 });

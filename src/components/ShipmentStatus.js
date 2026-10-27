@@ -50,9 +50,9 @@ export default function ShipmentStatus({ shipment, viewer = 'buyer' }) {
             : 'the shop';
     return (
       <div className="shipment-status cancelled-note">
-        ✕ Cancelled by {who}
+        Cancelled by {who}
         {shipment.cancelReason && `: “${shipment.cancelReason}”`}
-        {refund && <div className="small">💸 {refund}</div>}
+        {refund && <div className="small">{refund}</div>}
       </div>
     );
   }
@@ -80,13 +80,13 @@ export default function ShipmentStatus({ shipment, viewer = 'buyer' }) {
       </div>
       {shipment.latestCase && (
         <div className="small">
-          {shipment.latestCase.kind === 'return' ? '↩️ Return' : '📭 Missing parcel'}:{' '}
+          {shipment.latestCase.kind === 'return' ? 'Return' : 'Missing parcel'}:{' '}
           <Link to={`/cases/${shipment.latestCase.id}`} className="link">
             {CASE_STATUS[shipment.latestCase.status]}
           </Link>
         </div>
       )}
-      {refund && <div className="small">💸 {refund}</div>}
+      {refund && <div className="small">{refund}</div>}
     </div>
   );
 }

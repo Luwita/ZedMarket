@@ -153,7 +153,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, submitLabel =
           {form.images.length < MAX_PHOTOS && (
             <label className="upload-add">
               <input type="file" accept="image/*" multiple onChange={addPhotos} hidden />
-              {uploading ? 'Uploading…' : '📷 Add photos'}
+              {uploading ? 'Uploading…' : 'Add photos'}
             </label>
           )}
         </div>

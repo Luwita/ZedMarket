@@ -6,6 +6,7 @@ import { Analytics, Marketing, Payouts, RequestModeration } from '../components/
 import { EditProduct, EditShop, ParcelControls, Settings, Staff } from '../components/AdminControl';
 import { DeliverySettings } from '../components/AdminDelivery';
 import { QrCodes } from '../components/AdminQr';
+import SideNav from '../components/SideNav';
 import { CASE_STATUS } from '../components/ShipmentStatus';
 import { useStore } from '../context/StoreContext';
 import { formatLocation } from '../data/zambia';
@@ -766,13 +767,6 @@ export default function Admin() {
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') ?? 'overview';
   // On phones the current section is scrolled into view in the row of tabs.
-  const ready = authReady && !!user?.isAdmin;
-  useEffect(() => {
-    const on = document.querySelector('.admin-nav button.on');
-    const row = on?.parentElement?.parentElement;
-    // Scroll only the row sideways, never the page.
-    if (on && row && row.scrollWidth > row.clientWidth) row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
-  }, [tab, ready]);
   if (!authReady) return null;
   if (!user) return <Navigate to="/login?next=/admin" replace />;
   if (!user.isAdmin) {
@@ -788,21 +782,10 @@ export default function Admin() {
           Zed Market {user.staffRole === 'owner' ? 'owner' : 'staff'} · {user.name}
         </span>
       </div>
-      <div className="admin-layout">
-        <nav className="card admin-nav" aria-label="Admin sections">
-          {GROUPS.map(([group, tabs]) => (
-            <div key={group ?? 'main'} className="admin-nav-group">
-              {group && <span className="admin-nav-label">{group}</span>}
-              {tabs.map(([id, name]) => (
-                <button key={id} className={tab === id ? 'on' : ''} onClick={() => go(id)} aria-current={tab === id ? 'page' : undefined}>
-                  {name}
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <section className="admin-main" aria-label={label}>
-          <h2 className="admin-title">{label}</h2>
+      <div className="dash-layout">
+        <SideNav groups={GROUPS} current={tab} onSelect={go} label="Admin sections" />
+        <section className="dash-main" aria-label={label}>
+          <h2 className="dash-title">{label}</h2>
           <Panel go={go} />
         </section>
       </div>

@@ -394,6 +394,24 @@ label.check {
 .seller-product:last-child {
   border-bottom: 0;
 }
+.seller-product > .grow {
+  min-width: 0;
+}
+/* Phones: photo on the left, the name and price beside it, Edit and Delete underneath. */
+@media (max-width: 600px) {
+  .seller-product {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 8px;
+  }
+  .seller-product .product-img-sm {
+    width: 64px;
+  }
+  .seller-product .pdp-buttons {
+    grid-column: 2;
+  }
+}
 .badge-inline {
   background: var(--red);
   color: #fff;

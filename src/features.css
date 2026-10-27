@@ -59,8 +59,15 @@
   background: var(--primary-soft);
 }
 .notification-icon {
-  font-size: 1.3rem;
-  line-height: 1;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--primary);
 }
 .dot {
   flex: none;

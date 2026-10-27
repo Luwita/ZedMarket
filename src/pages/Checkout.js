@@ -307,7 +307,7 @@ export default function Checkout() {
             )}
             {usesPoint && points.length > 0 && (
               <div className="field point-picker">
-                <label htmlFor="co-point">📮 Collect from which Zed Market Point?</label>
+                <label htmlFor="co-point">Collect from which Zed Market Point?</label>
                 <select id="co-point" value={pickupPoint ?? ''} onChange={(e) => setPointId(e.target.value)}>
                   {points.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -345,12 +345,12 @@ export default function Checkout() {
             {errors.payment && <span className="error">{errors.payment}</span>}
             {form.payment === 'momo' ? (
               <p className="escrow-note">
-                📲 After you place the order we show you {shipments.length > 1 ? "each shop's" : "the shop's"} Mobile
+                After you place the order we show you {shipments.length > 1 ? "each shop's" : "the shop's"} Mobile
                 Money number and text it to you. Send the money, tap "I've paid", and the shop sends your parcel once
                 the money arrives.{shipments.length > 1 && ' You pay each shop separately.'}
               </p>
             ) : (
-              <p className="escrow-note">💵 Pay the shop or its courier when you receive your parcel.</p>
+              <p className="escrow-note">Pay the shop or its courier when you receive your parcel.</p>
             )}
           </section>
         </div>
@@ -400,7 +400,7 @@ export default function Checkout() {
           {vouchers.length > 0 && (
             <div className="coupon-box">
               <select value={voucherId} onChange={(e) => setVoucherId(e.target.value)} aria-label="Voucher">
-                <option value="">🎁 Use a voucher ({vouchers.length})</option>
+                <option value="">Use a voucher ({vouchers.length})</option>
                 {vouchers.map((v) => (
                   <option key={v.id} value={v.id}>
                     {formatK(v.amount)} off orders over {formatK(v.minSpend)}
@@ -414,7 +414,7 @@ export default function Checkout() {
             {coupon ? (
               <div className="summary-row small">
                 <span>
-                  ✅ <strong>{coupon.code}</strong> applied
+                  <strong>{coupon.code}</strong> applied
                 </span>
                 <button
                   type="button"

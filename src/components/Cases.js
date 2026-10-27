@@ -224,7 +224,7 @@ export function ReportProblem({ order, shipment }) {
           {photos.length < 4 && (
             <label className="upload-add">
               <input type="file" accept="image/*" multiple onChange={addPhotos} hidden />
-              📷 Add photos
+              Add photos
             </label>
           )}
         </div>
@@ -347,7 +347,7 @@ export function CaseDetail({ id }) {
     <article className="card form-card case-detail">
       <div className="order-head">
         <h2>
-          {c.kind === 'return' ? '↩️ Return' : '📭 Missing parcel'}: {REASONS[c.reason]}
+          {c.kind === 'return' ? 'Return' : 'Missing parcel'}: {REASONS[c.reason]}
         </h2>
         <span className={`status case-${c.status}`}>{CASE_STATUS[c.status]}</span>
       </div>
@@ -372,7 +372,7 @@ export function CaseDetail({ id }) {
           ))}
         </div>
       )}
-      {c.refundAmount && <p className="quote-offer">💸 Refund of {formatK(c.refundAmount)} to the buyer</p>}
+      {c.refundAmount && <p className="quote-offer">Refund of {formatK(c.refundAmount)} to the buyer</p>}
 
       <ol className="timeline">
         {c.events.map((e, i) => (
@@ -431,14 +431,14 @@ export function ShopCases() {
   }, [notify]);
 
   if (!list) return <p className="muted">Loading…</p>;
-  if (!list.length) return <div className="card empty">No returns or problems reported. 🎉</div>;
+  if (!list.length) return <div className="card empty">No returns or problems reported.</div>;
   return (
     <div className="orders">
       {list.map((c) => (
         <Link key={c.id} to={`/cases/${c.id}`} className="card order case-row">
           <div className="order-head">
             <strong>
-              {c.kind === 'return' ? '↩️' : '📭'} {REASONS[c.reason]}
+              {c.kind === 'return' ? 'Return:' : 'Missing parcel:'} {REASONS[c.reason]}
             </strong>
             <span className="muted small">
               {c.orderId} · {c.buyerName} · {date(c.date)}

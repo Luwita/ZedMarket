@@ -21,13 +21,13 @@ export function ShopNotices() {
     <>
       {info?.status === 'pending' && (
         <div className="card alert-bar review-bar" role="status">
-          ⏳ <strong>Your shop is waiting for approval.</strong> Zed Market checks every new shop before buyers can see
+          <strong>Your shop is waiting for approval.</strong> Zed Market checks every new shop before buyers can see
           it, usually within 2 working days. You can add products now; they go live as soon as your shop is approved.
         </div>
       )}
       {info?.status === 'rejected' && (
         <div className="card alert-bar danger-bar" role="alert">
-          ✋ <strong>Your shop wasn't approved yet:</strong> {info.note}. Update your details under{' '}
+          <strong>Your shop wasn't approved yet:</strong> {info.note}. Update your details under{' '}
           <Link to="/seller?tab=settings">Shop &amp; delivery</Link> and we'll look again.
         </div>
       )}
@@ -39,12 +39,12 @@ export function ShopNotices() {
       )}
       {info?.suspended && (
         <div className="card alert-bar danger-bar" role="alert">
-          ⛔ Your shop is suspended and hidden from buyers: {info.suspendReason}. Contact support@zedmarket.co.zm.
+          Your shop is suspended and hidden from buyers: {info.suspendReason}. Contact support@zedmarket.co.zm.
         </div>
       )}
       {removed.length > 0 && (
         <div className="card alert-bar" role="status">
-          🚫 Zed Market removed {removed.length === 1 ? 'a listing' : `${removed.length} listings`}:
+          Zed Market removed {removed.length === 1 ? 'a listing' : `${removed.length} listings`}:
           <ul>
             {removed.map((p) => (
               <li key={p.id}>
@@ -61,7 +61,7 @@ export function ShopNotices() {
 const STATUS = {
   unverified: 'Not sent yet: your shop is hidden from buyers',
   pending: 'Waiting for approval (usually within 2 working days). Buyers will see your shop once approved.',
-  verified: '✓ Approved: your shop is live, with a verified badge',
+  verified: 'Approved: your shop is live, with a verified badge',
   rejected: 'Not approved yet',
 };
 

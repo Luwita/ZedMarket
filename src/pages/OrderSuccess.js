@@ -61,7 +61,7 @@ export default function OrderSuccess() {
             View my orders
           </Link>
           <Link to={`/order/${order.id}/receipt`} className="btn btn-outline">
-            🧾 Receipt
+            Receipt
           </Link>
         </div>
       </div>

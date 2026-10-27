@@ -190,7 +190,7 @@ export default function Promotions({ shopId }) {
                 disabled={!isFeatured(p) && activeCount >= FEATURED_LIMIT}
                 onClick={() => toggleFeature(p)}
               >
-                {isFeatured(p) ? 'Stop featuring' : '⭐ Feature'}
+                {isFeatured(p) ? 'Stop featuring' : 'Feature'}
               </button>
             </li>
           ))}

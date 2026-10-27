@@ -18,6 +18,7 @@ import { useProduct, useProductSearch } from '../hooks/useProducts';
 import { formatK } from '../utils/format';
 import { mapLink } from '../utils/geo';
 import Icon from '../components/Icon';
+import SideNav from '../components/SideNav';
 
 // Send several parcels at once, e.g. after one trip to the bus station or courier office.
 function BatchDispatch({ orders }) {
@@ -135,15 +136,15 @@ function OrderCard({ order, shipment }) {
       <div className="small">
         {shipment.paid
           ? order.payByMomo
-            ? '✅ Paid to your Mobile Money'
-            : '✅ Paid'
+            ? 'Paid to your Mobile Money'
+            : 'Paid'
           : awaitingPayment
-            ? '⏳ Not paid yet'
-            : '💵 Collect payment on delivery'}
+            ? 'Not paid yet'
+            : 'Collect payment on delivery'}
         : <strong>{formatK(shipment.subtotal)}</strong> + delivery {formatK(shipment.fee)}
       </div>
       <ShipmentStatus shipment={shipment} viewer="shop" />
-      {shipment.pickupPoint && <div className="small">📮 Send to {shipment.pickupPoint}</div>}
+      {shipment.pickupPoint && <div className="small">Send to {shipment.pickupPoint}</div>}
 
       {shipment.status === 'pending' && awaitingPayment && (
         <div className="pay-shop">
@@ -291,7 +292,7 @@ function SellerPayouts() {
   if (!p) return null;
   return (
     <section className="card form-card">
-      <h3>💰 Your money</h3>
+      <h3>Your money</h3>
       <div className="tiles">
         {p.available < 0 ? (
           <div className="tile">
@@ -441,17 +442,32 @@ export default function SellerDashboard() {
   const pending = myOrders.filter((x) => x.shipment.status === 'pending').length;
   const sales = myOrders.reduce((sum, x) => sum + x.shipment.subtotal, 0);
   const go = (next) => setParams(next);
-  const tabs = [
-    ['products', `My products (${productCount})`],
-    ['add', '+ Add product'],
-    ['bulk', 'Bulk upload'],
-    ['orders', 'Orders', pending],
-    ['reviews', 'Reviews'],
-    ['returns', 'Returns'],
-    ['quotes', 'Price requests'],
-    ['promotions', 'Promotions'],
-    ['report', 'Sales report'],
-    ['settings', 'Shop & delivery'],
+  const groups = [
+    [
+      'Products',
+      [
+        ['products', `My products (${productCount})`],
+        ['add', 'Add product'],
+        ['bulk', 'Bulk upload'],
+      ],
+    ],
+    [
+      'Sales',
+      [
+        ['orders', 'Orders', pending],
+        ['returns', 'Returns'],
+        ['quotes', 'Price requests'],
+        ['reviews', 'Reviews'],
+      ],
+    ],
+    [
+      'Grow',
+      [
+        ['promotions', 'Promotions'],
+        ['report', 'Sales report'],
+      ],
+    ],
+    ['Shop', [['settings', 'Shop & delivery']]],
   ];
 
   return (
@@ -487,7 +503,7 @@ export default function SellerDashboard() {
 
       {myShop.ownerId === user.id && !myShop.takesMomo && (
         <div className="card alert-bar" role="status">
-          📲 Add your Mobile Money number so buyers can pay you. Until you do, they can only pay on delivery.{' '}
+          Add your Mobile Money number so buyers can pay you. Until you do, they can only pay on delivery.{' '}
           <button className="link-btn" onClick={() => go({ tab: 'settings' })}>
             Add it now
           </button>
@@ -496,146 +512,143 @@ export default function SellerDashboard() {
 
       {lowCount > 0 && tab !== 'report' && (
         <div className="card alert-bar" role="status">
-          ⚠️ {lowCount} product{lowCount > 1 ? 's are' : ' is'} running low on stock.{' '}
+          {lowCount} product{lowCount > 1 ? 's are' : ' is'} running low on stock.{' '}
           <button className="link-btn" onClick={() => go({ tab: 'products', low: '1' })}>
             Show {lowCount > 1 ? 'them' : 'it'}
           </button>
         </div>
       )}
 
-      <div className="tabs tabs-scroll">
-        {tabs.map(([id, label, badge]) => (
-          <button key={id} className={tab === id ? 'on' : ''} onClick={() => go({ tab: id })}>
-            {label} {badge > 0 && <span className="badge-inline">{badge}</span>}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'products' && editing && (
-        <div className="card form-card narrow-card">
-          <h2>Edit product</h2>
-          {editProduct ? (
-            <ProductForm
-              key={editProduct.id}
-              initial={editProduct}
-              submitLabel="Save changes"
-              onCancel={() => go({ tab: 'products' })}
-              onSubmit={async (data) => {
-                await updateProduct(editProduct.id, data);
-                go({ tab: 'products' });
-              }}
-            />
-          ) : (
-            <p className="muted">Loading…</p>
+      <div className="dash-layout">
+        <SideNav groups={groups} current={tab} onSelect={(id) => go({ tab: id })} label="Shop dashboard sections" />
+        <section className="dash-main">
+          {tab === 'products' && editing && (
+            <div className="card form-card narrow-card">
+              <h2>Edit product</h2>
+              {editProduct ? (
+                <ProductForm
+                  key={editProduct.id}
+                  initial={editProduct}
+                  submitLabel="Save changes"
+                  onCancel={() => go({ tab: 'products' })}
+                  onSubmit={async (data) => {
+                    await updateProduct(editProduct.id, data);
+                    go({ tab: 'products' });
+                  }}
+                />
+              ) : (
+                <p className="muted">Loading…</p>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {tab === 'products' && !editing && (
-        <>
-          {lowOnly && (
-            <p className="small">
-              Showing products running low.{' '}
-              <button className="link-btn" onClick={() => go({ tab: 'products' })}>
-                Show all
-              </button>
-            </p>
-          )}
-          <ProductList result={products} lowOnly={lowOnly} go={go} />
-        </>
-      )}
-
-      {tab === 'add' && (
-        <div className="card form-card narrow-card">
-          {params.get('resell') ? (
-            <ResellForm
-              key={params.get('resell')}
-              productId={params.get('resell')}
-              onSubmit={async (data) => {
-                await addProduct(data);
-                go({ tab: 'products' });
-              }}
-            />
-          ) : (
+          {tab === 'products' && !editing && (
             <>
-              <h2>Upload a product</h2>
-              <ProductForm
-                onSubmit={async (data) => {
-                  await addProduct(data);
-                  go({ tab: 'products' });
+              {lowOnly && (
+                <p className="small">
+                  Showing products running low.{' '}
+                  <button className="link-btn" onClick={() => go({ tab: 'products' })}>
+                    Show all
+                  </button>
+                </p>
+              )}
+              <ProductList result={products} lowOnly={lowOnly} go={go} />
+            </>
+          )}
+
+          {tab === 'add' && (
+            <div className="card form-card narrow-card">
+              {params.get('resell') ? (
+                <ResellForm
+                  key={params.get('resell')}
+                  productId={params.get('resell')}
+                  onSubmit={async (data) => {
+                    await addProduct(data);
+                    go({ tab: 'products' });
+                  }}
+                />
+              ) : (
+                <>
+                  <h2>Upload a product</h2>
+                  <ProductForm
+                    onSubmit={async (data) => {
+                      await addProduct(data);
+                      go({ tab: 'products' });
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          )}
+
+          {tab === 'bulk' && (
+            <div className="card form-card">
+              <BulkUpload onDone={() => go({ tab: 'products' })} />
+            </div>
+          )}
+
+          {tab === 'orders' &&
+            (myOrders.length ? (
+              <div className="orders">
+                <BatchDispatch orders={myOrders} />
+                {myOrders.map(({ order, shipment }) => (
+                  <OrderCard key={order.id} order={order} shipment={shipment} />
+                ))}
+              </div>
+            ) : (
+              <div className="card empty">
+                <p>No orders yet. Share your shop link on WhatsApp and Facebook to get your first sale.</p>
+              </div>
+            ))}
+
+          {tab === 'reviews' && <ShopReviews />}
+
+          {tab === 'returns' && <ShopCases />}
+
+          {tab === 'quotes' && <ShopPriceRequests />}
+
+          {tab === 'promotions' && (
+            <>
+              <QrCard
+                code={{
+                  id: `shop-${myShop.id}`,
+                  title: myShop.name,
+                  who: "Your shop's QR code: print it for your counter or share it",
+                  path: `/store/${myShop.id}`,
+                  text: 'Scan to see our products and order on Zed Market. Pay by Mobile Money or on delivery.',
                 }}
               />
+              <Promotions shopId={myShop.id} />
             </>
           )}
-        </div>
-      )}
 
-      {tab === 'bulk' && (
-        <div className="card form-card">
-          <BulkUpload onDone={() => go({ tab: 'products' })} />
-        </div>
-      )}
-
-      {tab === 'orders' &&
-        (myOrders.length ? (
-          <div className="orders">
-            <BatchDispatch orders={myOrders} />
-            {myOrders.map(({ order, shipment }) => (
-              <OrderCard key={order.id} order={order} shipment={shipment} />
-            ))}
-          </div>
-        ) : (
-          <div className="card empty">
-            <p>No orders yet. Share your shop link on WhatsApp and Facebook to get your first sale.</p>
-          </div>
-        ))}
-
-      {tab === 'reviews' && <ShopReviews />}
-
-      {tab === 'returns' && <ShopCases />}
-
-      {tab === 'quotes' && <ShopPriceRequests />}
-
-      {tab === 'promotions' && (
-        <>
-          <QrCard
-            code={{
-              id: `shop-${myShop.id}`,
-              title: myShop.name,
-              who: "Your shop's QR code: print it for your counter or share it",
-              path: `/store/${myShop.id}`,
-              text: 'Scan to see our products and order on Zed Market. Pay by Mobile Money or on delivery.',
-            }}
-          />
-          <Promotions shopId={myShop.id} />
-        </>
-      )}
-
-      {tab === 'report' && (
-        <>
-          <SellerPayouts />
-          <p className="small">
-            <Link to="/seller/statement" className="link">
-              🧾 Monthly statement (commission and payouts) →
-            </Link>
-          </p>
-          <SalesReport onEditProduct={(id) => go({ tab: 'products', edit: id })} />
-        </>
-      )}
-
-      {tab === 'settings' && (
-        <div className="card form-card narrow-card">
-          {myShop.ownerId === user.id ? (
+          {tab === 'report' && (
             <>
-              <VerificationPanel />
-              <hr />
-              <ShopForm initial={myShop} submitLabel="Save settings" onSubmit={(shop) => updateShop(myShop.id, shop)} />
+              <SellerPayouts />
+              <p className="small">
+                <Link to="/seller/statement" className="link">
+                  Monthly statement (commission and payouts) →
+                </Link>
+              </p>
+              <SalesReport onEditProduct={(id) => go({ tab: 'products', edit: id })} />
             </>
-          ) : (
-            <p className="muted">Demo shops can't be edited.</p>
           )}
-        </div>
-      )}
+
+          {tab === 'settings' && (
+            <div className="card form-card narrow-card">
+              {myShop.ownerId === user.id ? (
+                <>
+                  <VerificationPanel />
+                  <hr />
+                  <ShopForm initial={myShop} submitLabel="Save settings" onSubmit={(shop) => updateShop(myShop.id, shop)} />
+                </>
+              ) : (
+                <p className="muted">Demo shops can't be edited.</p>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

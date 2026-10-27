@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import * as api from '../api';
+import Icon from '../components/Icon';
 import { useStore } from '../context/StoreContext';
 
+// Line icons (components/Icon) for each kind of notification.
 const ICON = {
-  order: '📦',
-  cancelled: '✕',
-  case: '↩️',
-  quote: '🏷️',
-  offer: '🤝',
-  shop: '🏪',
-  listing: '🚫',
-  refund: '💸',
-  support: '🛟',
-  voucher: '🎁',
-  payout: '💰',
-  announcement: '📣',
+  order: 'box',
+  cancelled: 'box',
+  case: 'box',
+  quote: 'tag',
+  offer: 'tag',
+  shop: 'store',
+  listing: 'store',
+  refund: 'wallet',
+  support: 'support',
+  voucher: 'tag',
+  payout: 'wallet',
+  announcement: 'bell',
 };
 
 const when = (d) =>
@@ -68,7 +70,9 @@ export default function Notifications() {
           {list.map((n) => (
             <li key={n.id}>
               <button className={`notification ${n.read ? '' : 'unread'}`} onClick={() => open(n)}>
-                <span className="notification-icon">{ICON[n.kind] ?? '🔔'}</span>
+                <span className="notification-icon">
+                  <Icon name={ICON[n.kind] ?? 'bell'} size={18} />
+                </span>
                 <span className="grow">
                   <strong>{n.title}</strong>
                   {n.body && <span className="block small muted">{n.body}</span>}

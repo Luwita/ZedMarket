@@ -95,7 +95,7 @@ function Thread({ id, onChange }) {
         ))}
         <div ref={bottom} />
       </div>
-      <p className="safety-note">🔒 Pay through Zed Market checkout so your money is protected until delivery.</p>
+      <p className="safety-note">Pay through Zed Market checkout so your money is protected until delivery.</p>
       <form className="composer" onSubmit={send}>
         <textarea
           rows="2"
@@ -138,41 +138,52 @@ export default function Messages() {
   return (
     <div className="container section">
       <h1>Messages</h1>
-      <div className={`messages-layout ${id ? 'has-thread' : ''}`}>
-        <aside className="card conversation-list">
-          {list === null ? (
-            <p className="muted small pad">Loading…</p>
-          ) : list.length ? (
-            list.map((c) => (
-              <Link key={c.id} to={`/messages/${c.id}`} className={`conversation ${c.id === id ? 'on' : ''}`}>
-                <span className="conversation-top">
-                  <strong>{c.withName}</strong>
-                  <span className="muted small">{when(c.lastMessageAt)}</span>
-                </span>
-                <span className="small muted">
-                  {c.role === 'seller' ? '🏪 Customer · ' : ''}
-                  {c.productName ?? ''}
-                </span>
-                <span className="conversation-last">
-                  <span className="ellipsis">{c.lastMessage}</span>
-                  {c.unread > 0 && <span className="badge-inline">{c.unread}</span>}
-                </span>
-              </Link>
-            ))
-          ) : (
-            <p className="muted small pad">
-              No messages yet. Use "Ask the shop" on any product to ask about sizes, stock or delivery.
-            </p>
-          )}
-        </aside>
-        <section className="card thread-wrap">
-          {id ? (
-            <Thread id={id} onChange={loadList} />
-          ) : (
-            <div className="thread empty muted">Choose a conversation.</div>
-          )}
-        </section>
-      </div>
+      {list?.length === 0 && !id ? (
+        <div className="card empty">
+          <div className="empty-icon">💬</div>
+          <h3>No messages yet</h3>
+          <p className="muted">Use "Ask the shop" on any product to ask about sizes, stock or delivery.</p>
+          <Link to="/shop" className="btn btn-primary">
+            Browse products
+          </Link>
+        </div>
+      ) : (
+        <div className={`messages-layout ${id ? 'has-thread' : ''}`}>
+          <aside className="card conversation-list">
+            {list === null ? (
+              <p className="muted small pad">Loading…</p>
+            ) : list.length ? (
+              list.map((c) => (
+                <Link key={c.id} to={`/messages/${c.id}`} className={`conversation ${c.id === id ? 'on' : ''}`}>
+                  <span className="conversation-top">
+                    <strong>{c.withName}</strong>
+                    <span className="muted small">{when(c.lastMessageAt)}</span>
+                  </span>
+                  <span className="small muted">
+                    {c.role === 'seller' ? 'Customer · ' : ''}
+                    {c.productName ?? ''}
+                  </span>
+                  <span className="conversation-last">
+                    <span className="ellipsis">{c.lastMessage}</span>
+                    {c.unread > 0 && <span className="badge-inline">{c.unread}</span>}
+                  </span>
+                </Link>
+              ))
+            ) : (
+              <p className="muted small pad">
+                No messages yet. Use "Ask the shop" on any product to ask about sizes, stock or delivery.
+              </p>
+            )}
+          </aside>
+          <section className="card thread-wrap">
+            {id ? (
+              <Thread id={id} onChange={loadList} />
+            ) : (
+              <div className="thread empty muted">Choose a conversation.</div>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }

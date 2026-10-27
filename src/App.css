@@ -1253,7 +1253,13 @@ select:focus {
 .order {
   padding: 16px 18px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* long content wraps instead of widening the card */
   gap: 8px;
+}
+.order-head .link-btn {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
 }
 .order-head,
 .order-foot {
@@ -1262,6 +1268,10 @@ select:focus {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+/* Order number and date together on the left, the status on the right. */
+.order-head > strong + .muted {
+  margin-right: auto;
 }
 
 /* ---------- Footer & toast ---------- */
