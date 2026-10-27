@@ -134,7 +134,7 @@ test('a shop that was not approved sees why, fixes its details and is approved',
   renderAt('/admin?tab=shops');
   const card = (await screen.findByRole('link', { name: 'Mutinta Appliances' })).closest('.order');
   expect(within(card).getByText(/123456\/78\/1/)).toBeInTheDocument();
-  fireEvent.click(within(card).getByRole('button', { name: '✓ Approve' }));
+  fireEvent.click(within(card).getByRole('button', { name: 'Approve' }));
   await waitFor(() => expect(api.__db().shops.find((s) => s.id === 'shop_fans').verification).toBe('verified'));
   expect(api.__db().actions[0]).toMatchObject({ action: 'shop verified', admin: 'Staff' });
 });

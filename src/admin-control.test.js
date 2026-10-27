@@ -51,7 +51,7 @@ test('staff fix a shop’s details with a reason the shop sees', async () => {
   renderAt('/admin?tab=shops');
   fireEvent.change(await screen.findByLabelText('Status'), { target: { value: '' } });
   const card = (await screen.findByRole('link', { name: 'Mutinta Appliances' })).closest('.order');
-  fireEvent.click(within(card).getByRole('button', { name: '✎ Edit details' }));
+  fireEvent.click(within(card).getByRole('button', { name: 'Edit details' }));
   type(await screen.findByLabelText(/Reason for the change/).then(() => /Reason for the change/), 'Name as on PACRA certificate');
   type('Shop name', 'Mutinta Home Appliances');
   fireEvent.click(screen.getByRole('button', { name: 'Save shop details' }));

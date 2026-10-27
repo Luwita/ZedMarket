@@ -96,7 +96,7 @@ function Overview({ go }) {
       </div>
       <h3>Grow the marketplace</h3>
       <div className="tiles">
-        {tile('Sign-up QR codes', '📱', 'for shop owners and customers', 'qr')}
+        {tile('Sign-up QR codes', 'View', 'for shop owners and customers', 'qr')}
       </div>
     </>
   );
@@ -162,7 +162,7 @@ function Shops() {
                     className="btn btn-primary btn-sm"
                     onClick={() => run(() => api.admin.verifyShop(s.id, 'verified', ''), `${s.name} verified`)}
                   >
-                    ✓ Approve
+                    Approve
                   </button>
                   <ReasonButton
                     label="Reject"
@@ -188,7 +188,7 @@ function Shops() {
                 />
               )}
               <button className="btn btn-outline btn-sm" onClick={() => setEditing(editing === s.id ? null : s.id)}>
-                {editing === s.id ? 'Close' : '✎ Edit details'}
+                {editing === s.id ? 'Close' : 'Edit details'}
               </button>
               {isOwner && (
                 <ReasonButton
@@ -260,7 +260,7 @@ function Listings() {
                     !p.removed && (
                       <span className="pdp-buttons">
                         <button className="btn btn-outline btn-sm" onClick={() => setEditing(editing === p.id ? null : p.id)}>
-                          {editing === p.id ? 'Close' : '✎ Edit'}
+                          {editing === p.id ? 'Close' : 'Edit'}
                         </button>
                         <ReasonButton
                           label="Remove"
@@ -351,7 +351,7 @@ function Users() {
                 <td>{u.phone}</td>
                 <td>
                   {u.role ? (
-                    <strong>{u.role === 'owner' ? '👑 Owner' : '🛡 Staff'}</strong>
+                    <strong>{u.role === 'owner' ? 'Owner' : 'Staff'}</strong>
                   ) : u.shopId ? (
                     <Link to={`/store/${u.shopId}`}>Shop owner</Link>
                   ) : (
@@ -450,13 +450,13 @@ function Disputes() {
           <option value="">All</option>
         </select>
       </div>
-      {items?.length === 0 && <p className="muted">Nothing here. 🎉</p>}
+      {items?.length === 0 && <p className="muted">Nothing here.</p>}
       <div className="orders">
         {items?.map((c) => (
           <div key={c.id} className="card order">
             <div className="order-head">
               <strong>
-                <Link to={`/cases/${c.id}`}>{c.kind === 'return' ? '↩️ Return' : '📭 Missing parcel'}</Link>:{' '}
+                <Link to={`/cases/${c.id}`}>{c.kind === 'return' ? 'Return' : 'Missing parcel'}</Link>:{' '}
                 {c.reason.replace('_', ' ')}
               </strong>
               <span className="muted small">
@@ -560,7 +560,7 @@ function Refunds() {
                 <td className="num">{formatK(r.amount)}</td>
                 <td>
                   {r.status === 'paid' ? (
-                    <span className="small">✓ {r.reference}</span>
+                    <span className="small">Ref. {r.reference}</span>
                   ) : (
                     <ReasonButton
                       label="Mark paid"
@@ -678,7 +678,7 @@ function Support() {
                     if (await run(() => api.adminSupport.setStatus(ticket.id, next), `Marked ${next}`)) show(ticket.id);
                   }}
                 >
-                  {ticket.status === 'open' ? '✓ Close' : 'Reopen'}
+                  {ticket.status === 'open' ? 'Close ticket' : 'Reopen'}
                 </button>
               </div>
               <p className="small muted">
@@ -713,49 +713,99 @@ function Support() {
   );
 }
 
-const TABS = [
-  ['overview', 'Overview', Overview],
-  ['analytics', 'Analytics', Analytics],
-  ['shops', 'Shops', Shops],
-  ['products', 'Listings', Listings],
-  ['reviews', 'Reviews', Reviews],
-  ['users', 'Users', Users],
-  ['orders', 'Orders', Orders],
-  ['cases', 'Disputes', Disputes],
-  ['refunds', 'Refunds', Refunds],
-  ['payouts', 'Payouts', Payouts],
-  ['marketing', 'Marketing', Marketing],
-  ['qr', 'QR codes', QrCodes],
-  ['requests', 'Buying requests', RequestModeration],
-  ['support', 'Support', Support],
-  ['staff', 'Staff', Staff],
-  ['delivery', 'Delivery', DeliverySettings],
-  ['settings', 'Settings', Settings],
-  ['activity', 'Activity log', Activity],
+// The admin sections, grouped for the side menu. On phones the groups become one row that scrolls sideways.
+const GROUPS = [
+  [
+    null,
+    [
+      ['overview', 'Overview', Overview],
+      ['analytics', 'Analytics', Analytics],
+    ],
+  ],
+  [
+    'Marketplace',
+    [
+      ['shops', 'Shops', Shops],
+      ['products', 'Listings', Listings],
+      ['reviews', 'Reviews', Reviews],
+      ['users', 'Users', Users],
+      ['requests', 'Buying requests', RequestModeration],
+    ],
+  ],
+  [
+    'Orders & money',
+    [
+      ['orders', 'Orders', Orders],
+      ['cases', 'Disputes', Disputes],
+      ['refunds', 'Refunds', Refunds],
+      ['payouts', 'Payouts', Payouts],
+      ['delivery', 'Delivery', DeliverySettings],
+    ],
+  ],
+  [
+    'Growth',
+    [
+      ['marketing', 'Marketing', Marketing],
+      ['qr', 'QR codes', QrCodes],
+    ],
+  ],
+  [
+    'Team & setup',
+    [
+      ['support', 'Support', Support],
+      ['staff', 'Staff', Staff],
+      ['settings', 'Settings', Settings],
+      ['activity', 'Activity log', Activity],
+    ],
+  ],
 ];
+const TABS = GROUPS.flatMap(([, tabs]) => tabs);
 
 export default function Admin() {
   const { user, authReady } = useStore();
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') ?? 'overview';
+  // On phones the current section is scrolled into view in the row of tabs.
+  const ready = authReady && !!user?.isAdmin;
+  useEffect(() => {
+    const on = document.querySelector('.admin-nav button.on');
+    const row = on?.parentElement?.parentElement;
+    // Scroll only the row sideways, never the page.
+    if (on && row && row.scrollWidth > row.clientWidth) row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
+  }, [tab, ready]);
   if (!authReady) return null;
   if (!user) return <Navigate to="/login?next=/admin" replace />;
   if (!user.isAdmin) {
     return <div className="container section card empty">This page is for Zed Market staff.</div>;
   }
-  const [, , Panel] = TABS.find(([id]) => id === tab) ?? TABS[0];
+  const [, label, Panel] = TABS.find(([id]) => id === tab) ?? TABS[0];
   const go = (id) => setParams({ tab: id });
   return (
     <div className="container section admin">
-      <h1>🛡 Zed Market admin</h1>
-      <div className="tabs admin-tabs">
-        {TABS.map(([id, label]) => (
-          <button key={id} className={tab === id ? 'on' : ''} onClick={() => go(id)}>
-            {label}
-          </button>
-        ))}
+      <div className="admin-head">
+        <h1>Admin</h1>
+        <span className="muted small">
+          Zed Market {user.staffRole === 'owner' ? 'owner' : 'staff'} · {user.name}
+        </span>
       </div>
-      <Panel go={go} />
+      <div className="admin-layout">
+        <nav className="card admin-nav" aria-label="Admin sections">
+          {GROUPS.map(([group, tabs]) => (
+            <div key={group ?? 'main'} className="admin-nav-group">
+              {group && <span className="admin-nav-label">{group}</span>}
+              {tabs.map(([id, name]) => (
+                <button key={id} className={tab === id ? 'on' : ''} onClick={() => go(id)} aria-current={tab === id ? 'page' : undefined}>
+                  {name}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+        <section className="admin-main" aria-label={label}>
+          <h2 className="admin-title">{label}</h2>
+          <Panel go={go} />
+        </section>
+      </div>
     </div>
   );
 }

@@ -36,7 +36,7 @@ test('staff publish a home page banner and it leads the slideshow', async () => 
   type('Opens', '/shop?sort=deals');
   expect(screen.getAllByText('Independence Day deals').length).toBeGreaterThan(0); // live preview
   fireEvent.click(screen.getByRole('button', { name: 'Publish banner' }));
-  expect(await screen.findByText(/🟢 Live/)).toBeInTheDocument();
+  expect(await screen.findByText(/^Live/)).toBeInTheDocument();
   staff.unmount();
 
   renderAt('/');

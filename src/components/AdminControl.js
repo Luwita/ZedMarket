@@ -150,7 +150,7 @@ export function Staff() {
             <span className="grow">
               <strong>{s.name}</strong> · {s.phone}
               <span className="block small muted">
-                {s.role === 'owner' ? '👑 Owner' : '🛡 Staff'}
+                {s.role === 'owner' ? 'Owner' : 'Staff'}
                 {s.since && ` · since ${date(s.since)}`}
               </span>
             </span>

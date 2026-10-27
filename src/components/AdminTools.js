@@ -84,7 +84,7 @@ export function Analytics() {
           <option value={365}>Last 12 months</option>
         </select>
         <button className="btn btn-outline btn-sm" onClick={exportCsv}>
-          ⬇ Download CSV
+          Download CSV
         </button>
       </div>
       <div className="tiles">
@@ -438,7 +438,7 @@ function Banners() {
               <span className="grow">
                 <strong>{b.title}</strong> → {b.link}
                 <span className="block small muted">
-                  {b.live ? '🟢 Live' : b.active ? '⏳ Scheduled or ended' : '⏸ Hidden'}
+                  {b.live ? 'Live' : b.active ? 'Scheduled or ended' : 'Hidden'}
                   {b.endsAt && ` · until ${date(b.endsAt)}`}
                 </span>
               </span>
@@ -575,7 +575,7 @@ function Announcements() {
   return (
     <section className="card form-card">
       <h3>Announcements</h3>
-      <p className="muted small">Appears in the 🔔 notifications of everyone in the group.</p>
+      <p className="muted small">Appears in the notifications of everyone in the group.</p>
       <form onSubmit={submit} className="marketing-form">
         <div className="form-grid">
           <div className="field">

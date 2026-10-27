@@ -106,7 +106,7 @@ test('a new shop and its products stay hidden from buyers until staff approve it
   const staff = renderAt('/admin?tab=shops');
   const card = (await screen.findByRole('link', { name: 'Mwansa Hardware' })).closest('.order');
   expect(within(card).getByText(/123456\/78\/1/)).toBeInTheDocument();
-  fireEvent.click(within(card).getByRole('button', { name: '✓ Approve' }));
+  fireEvent.click(within(card).getByRole('button', { name: 'Approve' }));
   await waitFor(() => expect(shop.verification).toBe('verified'));
   staff.unmount();
 

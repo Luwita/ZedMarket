@@ -116,14 +116,152 @@
   margin: 6px 0 0;
 }
 
-/* All admin sections stay visible: the tabs wrap onto more lines instead of scrolling off the screen. */
-.admin-tabs {
+/* ---------- Admin layout: a grouped side menu beside the section ---------- */
+.admin-head {
+  display: flex;
+  align-items: baseline;
   flex-wrap: wrap;
-  row-gap: 0;
+  gap: 4px 12px;
+  margin-bottom: 16px;
 }
-.admin-tabs button {
+.admin-head h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+}
+.admin-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.admin-nav {
+  position: sticky;
+  top: 170px;
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+.admin-nav-group {
+  display: grid;
+  gap: 1px;
+}
+.admin-nav-group + .admin-nav-group {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.admin-nav-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 2px 10px 4px;
+}
+.admin-nav button {
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
   white-space: nowrap;
-  padding: 8px 12px;
+}
+.admin-nav button:hover {
+  background: var(--bg);
+}
+.admin-nav button.on {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+.admin-main {
+  min-width: 0;
+}
+.admin-title {
+  font-size: 1.25rem;
+  margin: 2px 0 16px;
+}
+/* Cards inside a section: no extra space above their first heading. */
+.admin .card > h3:first-child,
+.admin .card > h2:first-child {
+  margin-top: 0;
+}
+
+/* Phones and small tablets: the menu becomes one row of tabs that scrolls sideways. */
+@media (max-width: 900px) {
+  .admin-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .admin-nav {
+    position: relative; /* the tabs' offsetLeft is measured from the row */
+    top: 0;
+    display: flex;
+    gap: 6px;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 calc(var(--gutter, 16px) * -1);
+    padding: 0 var(--gutter, 16px) 2px;
+  }
+  .admin-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .admin-nav-group {
+    display: contents;
+  }
+  .admin-nav-group + .admin-nav-group {
+    border: 0;
+    padding: 0;
+  }
+  .admin-nav-label {
+    display: none;
+  }
+  .admin-nav button {
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 0.85rem;
+  }
+  .admin-nav button.on {
+    border-color: var(--primary);
+  }
+  .admin-title {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+  }
+}
+
+/* "Before you launch": one tidy row per task, with its button on the right. */
+.launch-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.launch-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(146, 64, 14, 0.15);
+  font-size: 0.9rem;
+}
+.launch-list li .link-btn {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
 }
 
 /* Sign-up QR codes */
@@ -334,4 +472,16 @@ fieldset.plain {
 .rate-table input {
   width: 100%;
   min-width: 90px;
+}
+
+/* Tables in the admin panel sit on a card like the rest of the section. */
+.admin .table-wrap {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 4px 8px;
+}
+.admin .card .table-wrap {
+  box-shadow: none;
+  padding: 0;
 }

@@ -99,9 +99,9 @@ function CourierEditor({ courier, saved, isOwner, onSaved }) {
           {courier.icon} {courier.name}
         </h3>
         {saved.confirmed ? (
-          <span className="status status-delivered">✓ Saved</span>
+          <span className="status status-delivered">Saved</span>
         ) : (
-          <span className="status status-pending">⚠ Starting values, not confirmed</span>
+          <span className="status status-pending">Starting values, not confirmed</span>
         )}
       </div>
       {NOTES[courier.id] && <p className="muted small">{NOTES[courier.id]}</p>}
@@ -300,9 +300,9 @@ function PointsEditor({ saved, confirmed, isOwner, onSaved }) {
       <div className="order-head">
         <h3>Zed Market Points</h3>
         {confirmed ? (
-          <span className="status status-delivered">✓ Saved</span>
+          <span className="status status-delivered">Saved</span>
         ) : (
-          <span className="status status-pending">⚠ Showing {saved.length} example points</span>
+          <span className="status status-pending">Showing {saved.length} example points</span>
         )}
       </div>
       <p className="muted small">
@@ -395,7 +395,7 @@ export function DeliverySettings() {
     <>
       <p className={unconfirmed || !config.pointsConfirmed ? 'review-note' : 'muted small'}>
         {unconfirmed || !config.pointsConfirmed
-          ? `⚠ ${unconfirmed} courier${unconfirmed === 1 ? '' : 's'}${config.pointsConfirmed ? '' : ' and the Zed Market Points'} still use starting values. Enter the rates agreed with each courier and save.`
+          ? `${unconfirmed} courier${unconfirmed === 1 ? '' : 's'}${config.pointsConfirmed ? '' : ' and the Zed Market Points'} still use starting values. Enter the rates agreed with each courier and save.`
           : 'All delivery rates and points have been set.'}{' '}
         Changes apply to new orders straight away; past orders keep the fee they were charged.
         {!isOwner && ' Only owners can change these.'}
