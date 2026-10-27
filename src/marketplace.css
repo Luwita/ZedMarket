@@ -24,6 +24,20 @@
   font-size: 0.72rem;
   color: var(--muted);
 }
+.icon.inline-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 3px;
+  color: var(--muted);
+}
+.loc-btn strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.loc-btn strong .icon {
+  color: var(--primary);
+}
 .backdrop {
   position: fixed;
   inset: 0;
@@ -84,8 +98,17 @@ label.check {
   color: #fff;
 }
 .card-loc {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.75rem;
   margin-top: 6px;
+}
+.card-loc .icon {
+  color: var(--muted);
+}
+.card-loc > span {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -167,7 +190,7 @@ label.check {
   display: flex;
   gap: 14px;
   padding: 16px;
-  align-items: center;
+  align-items: flex-start;
   transition: transform 0.15s;
 }
 .shop-card:hover {

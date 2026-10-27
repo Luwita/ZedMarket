@@ -199,7 +199,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, submitLabel =
       </div>
 
       <label className="check">
-        <input type="checkbox" checked={form.local} onChange={set('local')} /> 🇿🇲 Made in Zambia
+        <input type="checkbox" checked={form.local} onChange={set('local')} /> Made in Zambia
       </label>
 
       <div className="field tiers-editor">

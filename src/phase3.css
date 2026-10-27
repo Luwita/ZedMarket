@@ -135,6 +135,10 @@
 .pdp-secondary {
   margin-top: 10px;
 }
+.pdp-secondary .btn {
+  padding: 9px 16px;
+  font-size: 0.9rem;
+}
 
 /* ---------- Promotions & price requests ---------- */
 .promotions {
@@ -332,6 +336,8 @@
 }
 .footer-tools .low-data-toggle {
   color: #d1d5db;
+  font-size: 0.85rem;
+  font-weight: 400;
   margin: 0;
 }
 .footer-bottom {

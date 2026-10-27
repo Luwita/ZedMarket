@@ -80,15 +80,15 @@
 }
 
 /* Verification */
+/* A plain inline (not inline-block) so the tick wraps together with the last word of the name. */
 .verified-badge {
-  display: inline-block;
   background: var(--green);
   color: #fff;
   border-radius: 999px;
-  font-size: 0.7em;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 1px 7px;
-  vertical-align: middle;
+  padding: 0.15em 0.42em;
+  vertical-align: 0.12em;
 }
 .verify-status {
   padding: 8px 12px;

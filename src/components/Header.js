@@ -23,7 +23,10 @@ function LocationButton() {
         aria-expanded={open}
       >
         <span className="loc-label">Deliver to</span>
-        <strong>📍 {location.town}</strong>
+        <strong>
+          <Icon name="pin" size={16} />
+          {location.town}
+        </strong>
       </button>
       {open && (
         <>
@@ -123,10 +126,10 @@ export default function Header() {
     <header className="site-header">
       <div className="topbar">
         <div className="container topbar-inner">
-          <span>🇿🇲 Local shops in all 10 provinces · Pay in Kwacha · Delivered by Zambian couriers</span>
+          <span>Local shops in all 10 provinces · Pay in Kwacha · Delivered by Zambian couriers</span>
           <span className="topbar-links">
             {user?.isAdmin ? (
-              <Link to="/admin">🛡 Admin panel</Link>
+              <Link to="/admin">Admin panel</Link>
             ) : myShop ? (
               <Link to="/seller">My shop dashboard</Link>
             ) : (
@@ -135,7 +138,7 @@ export default function Header() {
             <Link to="/delivery">Delivery & couriers</Link>
             {canInstall && (
               <button className="link-btn topbar-btn" onClick={install}>
-                📲 Install app
+                Install app
               </button>
             )}
             <Link to="/help">Help & support</Link>
@@ -170,42 +173,42 @@ export default function Header() {
         <nav className="header-actions">
           {!user?.isAdmin && (myShop || user?.accountType === 'seller') && (
             <Link to={myShop ? '/seller' : '/sell#register'} className="action">
-              <span className="action-icon">🏪</span>
+              <Icon name="store" />
               <span className="action-label">{myShop ? 'My shop' : 'Set up shop'}</span>
               {toDispatchCount > 0 && <span className="badge-count" title="Parcels to send">{toDispatchCount}</span>}
             </Link>
           )}
           {user?.isAdmin && (
             <Link to="/admin" className="action">
-              <span className="action-icon">🛡</span>
+              <Icon name="shield" />
               <span className="action-label">Admin</span>
             </Link>
           )}
           {user && (
             <Link to="/messages" className="action">
-              <span className="action-icon">💬</span>
+              <Icon name="chat" />
               <span className="action-label">Messages</span>
               {unreadMessages > 0 && <span className="badge-count">{unreadMessages}</span>}
             </Link>
           )}
           {user && (
             <Link to="/notifications" className="action">
-              <span className="action-icon">🔔</span>
+              <Icon name="bell" />
               <span className="action-label">Alerts</span>
               {notificationCount > 0 && <span className="badge-count">{notificationCount}</span>}
             </Link>
           )}
           <Link to={user ? '/account' : '/login'} className="action">
-            <span className="action-icon">👤</span>
+            <Icon name="user" />
             <span className="action-label">{user ? user.name.split(' ')[0] : 'Sign in'}</span>
           </Link>
           <Link to="/account?tab=wishlist" className="action action-saved">
-            <span className="action-icon">♡</span>
+            <Icon name="heart" />
             <span className="action-label">Saved</span>
             {wishlist.length > 0 && <span className="badge-count">{wishlist.length}</span>}
           </Link>
           <Link to="/cart" className="action">
-            <span className="action-icon">🛒</span>
+            <Icon name="cart" />
             <span className="action-label">Cart</span>
             {cartCount > 0 && <span className="badge-count">{cartCount}</span>}
           </Link>
@@ -217,7 +220,7 @@ export default function Header() {
           <NavLink to="/shop" end>
             All products
           </NavLink>
-          <Link to={nearMe}>📍 Near me ({location.town})</Link>
+          <Link to={nearMe}>Near me ({location.town})</Link>
           <Link to={`/shop?prov=${location.province}`}>{getProvince(location.province)?.name} Province</Link>
           <NavLink to="/stores">Shops</NavLink>
           <NavLink to="/wholesale">Wholesale</NavLink>

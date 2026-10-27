@@ -59,11 +59,11 @@ export default function Footer() {
       <div className="container footer-tools">
         <label className="check low-data-toggle">
           <input type="checkbox" checked={lowData} onChange={(e) => setLowData(e.target.checked)} />
-          📶 Low-data mode: skip photos and load fewer products at a time
+          Low-data mode: skip photos and load fewer products
         </label>
         {canInstall && (
           <button className="btn btn-light btn-sm" onClick={install}>
-            📲 Install Zed Market on this phone
+            Install the Zed Market app
           </button>
         )}
       </div>

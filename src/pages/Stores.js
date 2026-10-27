@@ -10,6 +10,7 @@ import ShareButton from '../components/ShareButton';
 import { useStore } from '../context/StoreContext';
 import { band, bandRank } from '../data/couriers';
 import { formatLocation, getProvince, provinces } from '../data/zambia';
+import Icon from '../components/Icon';
 
 export default function Stores() {
   const { shops, location } = useStore();
@@ -98,7 +99,7 @@ export function StorePage() {
         <span className="shop-logo">{shop.logo ?? '🏪'}</span>
         <div className="grow">
           <h1>
-            {shop.name}{' '}
+            {shop.name}{'\u00a0'}
             {shop.verified && (
               <span className="verified-badge" title="Verified by Zed Market">
                 ✓ Verified
@@ -110,11 +111,11 @@ export function StorePage() {
             <p className="review-note">⏳ Only you can see this page until Zed Market approves your shop.</p>
           )}
           <p className="muted">
-            📍 {shop.area ? `${shop.area}, ` : ''}
+            <Icon name="pin" size={14} className="inline-icon" />{shop.area ? `${shop.area}, ` : ''}
             {formatLocation(shop)} ·{' '}
             {shop.rating
               ? `★ ${shop.rating}${shop.reviewCount ? ` (${shop.reviewCount} reviews)` : ''}`
-              : '✨ New shop'}{' '}
+              : 'New shop'}{' '}
             · On Zed Market since {shop.since}
           </p>
           {shop.openingHours && <p className="small">🕘 {shop.openingHours}</p>}

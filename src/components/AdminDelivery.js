@@ -298,7 +298,7 @@ function PointsEditor({ saved, confirmed, isOwner, onSaved }) {
   return (
     <section className="card form-card">
       <div className="order-head">
-        <h3>📍 Zed Market Points</h3>
+        <h3>Zed Market Points</h3>
         {confirmed ? (
           <span className="status status-delivered">✓ Saved</span>
         ) : (

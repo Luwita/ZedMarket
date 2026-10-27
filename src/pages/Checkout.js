@@ -11,6 +11,7 @@ import { formatLocation } from '../data/zambia';
 import { formatK } from '../utils/format';
 import { currentPosition, distanceLabel } from '../utils/geo';
 import { groupByShop } from './Cart';
+import Icon from '../components/Icon';
 
 const PHONE = /^(\+?260|0)?[79]\d{8}$/;
 
@@ -292,14 +293,14 @@ export default function Checkout() {
             {byDistance && (
               <div className="locate-box">
                 {spot ? (
-                  <p className="small">📍 Using your location for an exact Yango price. The rider gets it too.</p>
+                  <p className="small"><Icon name="pin" size={14} className="inline-icon" />Using your location for an exact Yango price. The rider gets it too.</p>
                 ) : (
                   <p className="muted small">
                     Yango charges by distance. Share where you are for the exact price (otherwise it's an estimate).
                   </p>
                 )}
                 <button type="button" className="btn btn-outline btn-sm" onClick={locate} disabled={locating}>
-                  {locating ? 'Finding your location…' : spot ? '📍 Update my location' : '📍 Use my location'}
+                  {locating ? 'Finding your location…' : spot ? 'Update my location' : 'Use my location'}
                 </button>
                 {errors.spot && <span className="error small">{errors.spot}</span>}
               </div>

@@ -6,6 +6,7 @@ import { checkChoice, describeChoice } from '../data/options';
 import { formatLocation } from '../data/zambia';
 import { formatK } from '../utils/format';
 import LocationFields from './LocationFields';
+import Icon from './Icon';
 
 const STATUS = {
   open: ['Waiting for the shop', 'status-pending'],
@@ -34,7 +35,7 @@ export function RequestPriceForm({ product, choice, startQty }) {
   if (!user) {
     return (
       <Link to={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-outline">
-        📦 Request a wholesale price
+        Request a wholesale price
       </Link>
     );
   }
@@ -53,7 +54,7 @@ export function RequestPriceForm({ product, choice, startQty }) {
           setOpen(true);
         }}
       >
-        📦 Request a wholesale price
+        Request a wholesale price
       </button>
     );
   }
@@ -301,7 +302,7 @@ export function ShopPriceRequests() {
             <StatusPill status={r.status} />
           </div>
           <div className="small muted">
-            👤 {r.buyerName} · {r.buyerPhone} · 📍 {formatLocation(r)}
+            {r.buyerName} · {r.buyerPhone} · <Icon name="pin" size={14} className="inline-icon" />{formatLocation(r)}
             {describeChoice(r.options) && ` · ${describeChoice(r.options)}`}
           </div>
           <div className="small">

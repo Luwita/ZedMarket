@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
+import Icon from '../components/Icon';
 import ShopForm from '../components/ShopForm';
 import { useStore } from '../context/StoreContext';
 
@@ -22,24 +23,24 @@ const steps = [
 ];
 
 const perks = [
-  { icon: '🆓', title: 'Free to join', text: 'No listing fees. Pay a small commission only when you sell.' },
+  { icon: 'tag', title: 'Free to join', text: 'No listing fees. Pay a small commission only when you sell.' },
   {
-    icon: '📍',
+    icon: 'pin',
     title: 'Found by local buyers',
     text: 'Buyers in your town see your shop first, with the lowest delivery costs.',
   },
   {
-    icon: '🛵',
+    icon: 'truck',
     title: 'Use couriers you trust',
     text: 'Yango Delivery, Platinum Couriers, bus parcels, Zampost or your own rider.',
   },
   {
-    icon: '📦',
+    icon: 'box',
     title: 'Sell retail & wholesale',
     text: 'Set bulk prices so shop owners in other provinces can stock up from you.',
   },
-  { icon: '🤝', title: '1-on-1 support', text: 'A Zed Market agent helps you list products and get your first sales.' },
-  { icon: '💸', title: 'Fast payouts', text: 'MTN, Airtel, Zamtel or bank, within 48 hours of delivery.' },
+  { icon: 'support', title: 'One-on-one support', text: 'A Zed Market agent helps you list products and get your first sales.' },
+  { icon: 'wallet', title: 'Fast payouts', text: 'MTN, Airtel, Zamtel or bank, within 48 hours of delivery.' },
 ];
 
 export default function Sell() {
@@ -62,7 +63,7 @@ export default function Sell() {
             </Link>
           ) : (
             <a href="#register" className="btn btn-light btn-lg">
-              Open my shop. It's free
+              Open my shop for free
             </a>
           )}
         </div>
@@ -72,7 +73,9 @@ export default function Sell() {
         <div className="perk-grid">
           {perks.map((p) => (
             <div key={p.title} className="card perk">
-              <span className="perk-icon">{p.icon}</span>
+              <span className="perk-icon">
+                <Icon name={p.icon} size={22} />
+              </span>
               <h3>{p.title}</h3>
               <p className="muted">{p.text}</p>
             </div>

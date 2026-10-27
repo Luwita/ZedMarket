@@ -16,6 +16,7 @@ import { formatLocation } from '../data/zambia';
 import { useProduct, useProductSearch } from '../hooks/useProducts';
 import { discountPct, formatCount, formatK } from '../utils/format';
 import { distanceLabel } from '../utils/geo';
+import Icon from '../components/Icon';
 
 function DeliveryOptions({ shop, weightKg }) {
   const { location, setLocation } = useStore();
@@ -259,10 +260,10 @@ export default function ProductDetail() {
                 <Stars value={product.rating} size="sm" /> {product.rating} ({product.reviewCount} reviews)
               </a>
             ) : (
-              <span>{product.rating ? `★ ${product.rating}` : '✨ New listing'}</span>
+              <span>{product.rating ? `★ ${product.rating}` : 'New listing'}</span>
             )}
             {product.sold > 0 && <span>{formatCount(product.sold)} sold</span>}
-            {product.local && <span>🇿🇲 Made in Zambia</span>}
+            {product.local && <span>Made in Zambia</span>}
           </div>
 
           <div className="pdp-price">
@@ -333,7 +334,7 @@ export default function ProductDetail() {
               Buy now
             </button>
             <button className="btn btn-outline btn-lg" onClick={() => toggleWishlist(product)}>
-              {wishlist.includes(product.id) ? '♥ Saved' : '♡ Save'}
+              {wishlist.includes(product.id) ? 'Saved' : 'Save'}
             </button>
           </div>
 
@@ -356,7 +357,7 @@ export default function ProductDetail() {
               <span className="shop-logo sm">{shop.logo ?? '🏪'}</span>
               <span>
                 <strong>
-                  {shop.name}{' '}
+                  {shop.name}{'\u00a0'}
                   {shop.verified && (
                     <span className="verified-badge" title="Verified by Zed Market">
                       ✓
@@ -364,7 +365,7 @@ export default function ProductDetail() {
                   )}
                 </strong>
                 <span className="muted small block">
-                  📍 {shop.area ? `${shop.area}, ` : ''}
+                  <Icon name="pin" size={14} className="inline-icon" />{shop.area ? `${shop.area}, ` : ''}
                   {formatLocation(shop)} ·{' '}
                   {shop.rating ? `★ ${shop.rating}${shop.reviewCount ? ` (${shop.reviewCount})` : ''}` : 'New shop'}
                 </span>

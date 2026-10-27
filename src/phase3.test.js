@@ -43,7 +43,7 @@ function setupShopAndBuyer({ shop = {} } = {}) {
 test('a buyer asks a shop a question and the shop replies', async () => {
   const { sellerToken, buyerToken } = setupShopAndBuyer();
   const buyer = renderAt('/product/prd_fan');
-  fireEvent.click(await screen.findByRole('button', { name: '💬 Ask the shop' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask the shop' }));
   type('Message Mutinta Appliances', 'Does it come with a remote?');
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
 
@@ -92,7 +92,7 @@ test('a discount code is checked by the server and lowers the total at checkout'
 test('wholesale price request: ask, quote, accept, and check out at the agreed price', async () => {
   const { sellerToken, buyerToken } = setupShopAndBuyer();
   const buyer = renderAt('/product/prd_fan');
-  fireEvent.click(await screen.findByRole('button', { name: '📦 Request a wholesale price' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Request a wholesale price' }));
   type('How many units?', '40');
   type('Your target price per unit (K, optional)', '380');
   fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
@@ -141,7 +141,7 @@ test('low-data mode skips product photos until tapped', async () => {
   api.__db().products.find((p) => p.id === 'prd_fan').images = ['/uploads/fan.jpg'];
   localStorage.setItem('zedmarket.lowData', 'true');
   renderAt('/product/prd_fan');
-  const reveal = await screen.findByRole('button', { name: '📷 Tap to load photo' });
+  const reveal = await screen.findByRole('button', { name: 'Tap to load photo' });
   expect(document.querySelector('.pdp-gallery img')).toBeNull();
   fireEvent.click(reveal);
   expect(document.querySelector('.pdp-gallery img')).toHaveAttribute('src', '/uploads/fan.jpg');
@@ -151,9 +151,9 @@ test('featured products appear on the home page with a label', async () => {
   setupShopAndBuyer();
   api.__db().products.find((p) => p.id === 'prd_fan').featuredUntil = new Date(Date.now() + 864e5).toISOString();
   renderAt('/');
-  const section = (await screen.findByText('⭐ Featured by shops')).closest('section');
+  const section = (await screen.findByText('Featured by shops')).closest('section');
   expect(within(section).getByText('Standing Fan')).toBeInTheDocument();
-  expect(within(section).getByText('⭐ Featured')).toBeInTheDocument();
+  expect(within(section).getByText('Featured')).toBeInTheDocument();
 });
 
 test('a buyer can delete their account after confirming', async () => {

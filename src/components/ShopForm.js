@@ -161,7 +161,7 @@ export default function ShopForm({ initial, onSubmit, submitLabel, withOwner = f
         </p>
         <div className="pdp-buttons">
           <button type="button" className="btn btn-outline btn-sm" onClick={locate} disabled={locating}>
-            {locating ? 'Finding your location…' : form.lat != null ? '📍 Update to where I am now' : '📍 Use my current location'}
+            {locating ? 'Finding your location…' : form.lat != null ? 'Update to where I am now' : 'Use my current location'}
           </button>
           {form.lat != null && (
             <a className="link small" href={mapLink(form)} target="_blank" rel="noreferrer">

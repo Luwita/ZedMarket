@@ -128,11 +128,11 @@ export default function Help() {
                 <p className="muted small">Our team replies in your notifications, usually the same working day.</p>
               </form>
             ) : (
-              <p>
+              <p className="help-contact">
                 <Link to="/login?next=/help" className="btn btn-primary">
                   Sign in to message us
                 </Link>{' '}
-                or call +260 211 000 000.
+                <span className="muted">or call +260 211 000 000</span>
               </p>
             )}
           </section>

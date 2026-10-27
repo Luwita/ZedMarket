@@ -74,11 +74,41 @@
 /* ---------- Help ---------- */
 .faq {
   border-top: 1px solid var(--line);
-  padding: 10px 0;
+  padding: 12px 0;
 }
 .faq summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   font-weight: 600;
+  color: var(--ink);
   cursor: pointer;
+  list-style: none;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+/* A chevron on the right that turns when the answer is open. */
+.faq summary::after {
+  content: '';
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.15s;
+}
+.faq[open] summary::after {
+  transform: rotate(-135deg) translateY(-2px);
+}
+.help-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 0;
 }
 .faq p {
   margin: 8px 0 0;

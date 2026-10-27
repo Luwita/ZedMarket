@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 
 // Share a page: the phone's own share sheet when available, otherwise WhatsApp, Facebook or copy link.
-export default function ShareButton({ title, text = '', path, label = '↗ Share' }) {
+export default function ShareButton({ title, text = '', path, label = 'Share' }) {
   const { notify } = useStore();
   const [open, setOpen] = useState(false);
   const url = `${window.location.origin}${path ?? window.location.pathname}`;
@@ -32,7 +32,7 @@ export default function ShareButton({ title, text = '', path, label = '↗ Share
 
   return (
     <span className="share">
-      <button type="button" className="btn btn-outline btn-sm" onClick={share}>
+      <button type="button" className="btn btn-outline" onClick={share}>
         {label}
       </button>
       {open && (

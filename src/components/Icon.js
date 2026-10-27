@@ -78,12 +78,51 @@ const paths = {
       <path d="M3.5 7.5 12 11.5l8.5-4M12 11.5v9" />
     </>
   ),
+  heart: <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z" />,
+  store: (
+    <>
+      <path d="M4 9.5 5.5 4h13L20 9.5" />
+      <path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0" />
+      <path d="M5.5 12v8h13v-8M10 20v-4.5h4V20" />
+    </>
+  ),
+  shield: (
+    <>
+      <path d="M12 3.5 19 6v5.5c0 4.3-3 7.6-7 9-4-1.4-7-4.7-7-9V6z" />
+      <path d="m9 12 2.2 2.2L15.5 10" />
+    </>
+  ),
+  phone: (
+    <>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
+      <path d="M10.5 18.5h3" />
+    </>
+  ),
+  tag: (
+    <>
+      <path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8 8-9 9z" />
+      <circle cx="8.3" cy="8.3" r="1.4" />
+    </>
+  ),
+  wallet: (
+    <>
+      <path d="M4 7.5h14.5a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18z" />
+      <path d="M4 7.5 15.5 4v3.5M15.5 13.5h1.5" />
+    </>
+  ),
+  support: (
+    <>
+      <path d="M4.5 13v-1a7.5 7.5 0 0 1 15 0v1" />
+      <rect x="3.5" y="13" width="4" height="6" rx="1.5" />
+      <rect x="16.5" y="13" width="4" height="6" rx="1.5" />
+    </>
+  ),
 };
 
-export default function Icon({ name, size = 24 }) {
+export default function Icon({ name, size = 24, className = '' }) {
   return (
     <svg
-      className="icon"
+      className={`icon ${className}`.trim()}
       width={size}
       height={size}
       viewBox="0 0 24 24"

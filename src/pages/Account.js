@@ -13,6 +13,7 @@ import { useStore } from '../context/StoreContext';
 import { REFERRAL_REWARD, VOUCHER_MIN_SPEND as MIN_SPEND, WELCOME_VOUCHER as WELCOME } from '../data/fees';
 import { formatLocation } from '../data/zambia';
 import { formatK } from '../utils/format';
+import Icon from '../components/Icon';
 
 const shortDate = (d) => new Date(d).toLocaleDateString('en-ZM', { dateStyle: 'medium' });
 
@@ -41,7 +42,7 @@ function InvitePanel() {
           title="Join Zed Market"
           text={`Shop from local shops across Zambia on Zed Market. Use my code ${referral.code} for ${formatK(amounts.welcomeVoucher)} off.`}
           path={link}
-          label="↗ Share my invite"
+          label="Share my invite"
         />
         <p className="small muted">
           {referral.invited} friend{referral.invited === 1 ? '' : 's'} joined · {referral.rewarded} reward
@@ -294,7 +295,7 @@ export default function Account() {
           <h1>{user ? `Muli shani, ${user.name.split(' ')[0]}` : 'My account'}</h1>
           <p className="muted">
             {user &&
-              `${user.phone ?? user.email ?? ''} · ${user.isAdmin ? (user.staffRole === 'owner' ? 'Zed Market owner' : 'Zed Market staff') : (roleLabel[user.accountType] ?? 'Shopper')} · `}📍 {formatLocation(location)}
+              `${user.phone ?? user.email ?? ''} · ${user.isAdmin ? (user.staffRole === 'owner' ? 'Zed Market owner' : 'Zed Market staff') : (roleLabel[user.accountType] ?? 'Shopper')} · `}<Icon name="pin" size={14} className="inline-icon" />{formatLocation(location)}
           </p>
         </div>
         <div className="pdp-buttons">

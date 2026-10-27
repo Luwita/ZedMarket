@@ -73,7 +73,7 @@ export default function Shop({ wholesale = false }) {
           className={isNearMe ? 'on' : ''}
           onClick={() => update({ prov: location.province, town: location.town })}
         >
-          📍 Near me ({location.town})
+          <Icon name="pin" size={14} className="inline-icon" />Near me ({location.town})
         </button>
         <button
           className={prov === location.province && !town ? 'on' : ''}
@@ -82,7 +82,7 @@ export default function Shop({ wholesale = false }) {
           {getProvince(location.province)?.name} Province
         </button>
         <button className={!prov ? 'on' : ''} onClick={() => update({ prov: '', town: '' })}>
-          🇿🇲 All Zambia
+          All Zambia
         </button>
       </div>
 
@@ -102,7 +102,7 @@ export default function Shop({ wholesale = false }) {
 
           <label htmlFor="f-town">Town</label>
           <select id="f-town" value={town} disabled={!province} onChange={(e) => update({ town: e.target.value })}>
-            <option value="">{province ? `All towns in ${province.name}` : 'Choose a province first'}</option>
+            <option value="">{province ? `All towns in ${province.name}` : 'Pick a province first'}</option>
             {province?.towns.map((t) => (
               <option key={t}>{t}</option>
             ))}

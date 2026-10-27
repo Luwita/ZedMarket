@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as api from '../api';
+import Icon from '../components/Icon';
 import { ProductRow } from '../components/ProductGrid';
 import { useStore } from '../context/StoreContext';
 import { bannerThemes } from '../data/bannerThemes';
@@ -10,7 +11,7 @@ import { useProductSearch } from '../hooks/useProducts';
 
 const standardSlides = [
   {
-    title: 'Beat load-shedding',
+    title: 'Beat load‑shedding', // a non-breaking hyphen keeps the word on one line
     text: 'Solar panels, inverters & lithium batteries from trusted local shops at wholesale Kwacha prices.',
     cta: 'Shop Solar & Power',
     to: '/shop?cat=solar',
@@ -36,10 +37,10 @@ const standardSlides = [
 ];
 
 const promises = [
-  { icon: '🇿🇲', title: 'Local shops', text: 'Verified sellers in all 10 provinces' },
-  { icon: '📲', title: 'Pay your way', text: 'Mobile Money to the shop, or cash on delivery' },
-  { icon: '🛵', title: 'Zambian couriers', text: 'Yango, Platinum, bus parcel, Zampost' },
-  { icon: '🤝', title: '1-on-1 seller support', text: 'Help to list products and start selling' },
+  { icon: 'shield', title: 'Verified local shops', text: 'Checked sellers in all 10 provinces' },
+  { icon: 'phone', title: 'Pay your way', text: 'Mobile Money or cash on delivery' },
+  { icon: 'truck', title: 'Zambian couriers', text: 'Yango, Platinum, buses and Zampost' },
+  { icon: 'support', title: 'Seller support', text: 'One-on-one help to start selling' },
 ];
 
 // The banner carousel: campaign banners set by Zed Market staff come before the standard slides.
@@ -138,10 +139,10 @@ export default function Home() {
 
         <aside className="hero-side">
           <div className="card side-card side-accent">
-            <h4>📍 Shopping in {location.town}</h4>
+            <h4>Shopping in {location.town}</h4>
             <p>
               {shopsNearby} shop{shopsNearby === 1 ? '' : 's'} in {province?.name} Province. Change your location at the
-              top of the page.
+              top of the page to see others.
             </p>
             <Link
               to={`/shop?prov=${location.province}&town=${encodeURIComponent(location.town)}`}
@@ -163,7 +164,9 @@ export default function Home() {
       <section className="container promises">
         {promises.map((p) => (
           <div key={p.title} className="promise">
-            <span className="promise-icon">{p.icon}</span>
+            <span className="promise-icon">
+              <Icon name={p.icon} size={22} />
+            </span>
             <div>
               <strong>{p.title}</strong>
               <p>{p.text}</p>
@@ -175,7 +178,7 @@ export default function Home() {
       {near.length > 0 && (
         <section className="container section">
           <div className="section-head">
-            <h2>📍 Near you in {province?.name}</h2>
+            <h2>Near you in {province?.name}</h2>
             <Link to={`/shop?prov=${location.province}`}>See all →</Link>
           </div>
           <ProductRow items={near} />
@@ -185,7 +188,7 @@ export default function Home() {
       {featured.length > 0 && (
         <section className="container section">
           <div className="section-head">
-            <h2>⭐ Featured by shops</h2>
+            <h2>Featured by shops</h2>
             <span className="muted small">Promoted by the shops that sell them</span>
           </div>
           <ProductRow items={featured} />
@@ -195,7 +198,7 @@ export default function Home() {
       {deals.length > 0 && (
         <section className="container section">
           <div className="section-head deals-head">
-            <h2>⚡ Flash deals</h2>
+            <h2>Flash deals</h2>
             <Link to="/shop?sort=deals">See all →</Link>
           </div>
           <ProductRow items={deals} />
@@ -256,7 +259,7 @@ export default function Home() {
       {local.length > 0 && (
         <section className="container section">
           <div className="section-head">
-            <h2>🇿🇲 Made in Zambia</h2>
+            <h2>Made in Zambia</h2>
             <Link to="/shop?local=1">See all →</Link>
           </div>
           <ProductRow items={local} />

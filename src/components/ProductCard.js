@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getCategory } from '../data/catalog';
 import { bestDelivery, band } from '../data/couriers';
 import { useStore } from '../context/StoreContext';
+import Icon from './Icon';
 import { discountPct, formatCount, formatK } from '../utils/format';
 
 export function ProductImage({ product, size = 'md', index = 0 }) {
@@ -33,7 +34,7 @@ export function ProductImage({ product, size = 'md', index = 0 }) {
             setReveal(true);
           }}
         >
-          📷 Tap to load photo
+          Tap to load photo
         </button>
       )}
     </div>
@@ -60,7 +61,7 @@ export default function ProductCard({ product }) {
           <ProductImage product={product} />
           {off > 0 && <span className="tag tag-off">-{off}%</span>}
           {isFeatured(product) ? (
-            <span className="tag tag-featured">⭐ Featured</span>
+            <span className="tag tag-featured">Featured</span>
           ) : nearby ? (
             <span className="tag tag-near">Near you</span>
           ) : (
@@ -74,23 +75,26 @@ export default function ProductCard({ product }) {
         </div>
         {lowest && (
           <div className="wholesale-hint">
-            Wholesale from <strong>{formatK(lowest.price)}</strong> · MOQ {lowest.min}
+            Wholesale <strong>{formatK(lowest.price)}</strong> for {lowest.min}+
           </div>
         )}
         {shop && (
           <div className="card-loc">
-            📍 {shop.town}
-            {delivery && (
-              <span className="muted">
-                {' '}
-                · 🚚 {delivery.fee ? formatK(delivery.fee) : 'Free'}, {delivery.eta}
-              </span>
-            )}
+            <Icon name="pin" size={13} />
+            <span>
+              {shop.town}
+              {delivery && (
+                <span className="muted">
+                  {' · '}
+                  {delivery.fee ? `${formatK(delivery.fee)} delivery` : 'Free delivery'}
+                </span>
+              )}
+            </span>
           </div>
         )}
         <div className="meta-row">
           <span>
-            {product.rating ? `★ ${product.rating}` : '✨ New listing'}
+            {product.rating ? `★ ${product.rating}` : 'New listing'}
             {product.reviewCount > 0 && ` (${product.reviewCount})`}
           </span>
           {product.sold > 0 && <span>{formatCount(product.sold)} sold</span>}
@@ -109,7 +113,7 @@ export default function ProductCard({ product }) {
           aria-label={saved ? 'Remove from saved' : 'Save item'}
           onClick={() => toggleWishlist(product)}
         >
-          {saved ? '♥' : '♡'}
+          <Icon name="heart" size={20} />
         </button>
       </div>
     </article>

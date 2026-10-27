@@ -455,7 +455,7 @@ html.in-app body {
     font-size: 0.85rem;
   }
   .app-home .hero-kicker {
-    font-size: 0.65rem;
+    display: none;
   }
   .app-home .dots {
     left: 20px;
@@ -490,6 +490,12 @@ html.in-app body {
   .shop-toolbar select {
     flex: 1;
     min-width: 0;
+  }
+  .shop-toolbar select,
+  .shop-toolbar .filter-btn {
+    height: 40px;
+    padding-top: 0;
+    padding-bottom: 0;
   }
   .filter-btn.on {
     border-color: var(--primary);

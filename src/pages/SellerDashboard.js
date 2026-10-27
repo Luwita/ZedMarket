@@ -17,6 +17,7 @@ import { formatLocation } from '../data/zambia';
 import { useProduct, useProductSearch } from '../hooks/useProducts';
 import { formatK } from '../utils/format';
 import { mapLink } from '../utils/geo';
+import Icon from '../components/Icon';
 
 // Send several parcels at once, e.g. after one trip to the bus station or courier office.
 function BatchDispatch({ orders }) {
@@ -120,7 +121,7 @@ function OrderCard({ order, shipment }) {
         ))}
       </div>
       <div className="small muted">
-        👤 {order.buyer.name} · {order.buyer.phone} · 📍 {order.shipping.address}, {formatLocation(order.shipping)}
+        {order.buyer.name} · {order.buyer.phone} · <Icon name="pin" size={14} className="inline-icon" />{order.shipping.address}, {formatLocation(order.shipping)}
         {order.shipping.lat != null && (
           <>
             {' '}
@@ -460,7 +461,7 @@ export default function SellerDashboard() {
         <div className="grow">
           <h1>{myShop.name}</h1>
           <p className="muted">
-            📍 {myShop.area}, {formatLocation(myShop)} ·{' '}
+            <Icon name="pin" size={14} className="inline-icon" />{myShop.area}, {formatLocation(myShop)} ·{' '}
             <Link to={`/store/${myShop.id}`} className="link">
               View public shop page →
             </Link>

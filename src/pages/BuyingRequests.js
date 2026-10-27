@@ -7,6 +7,7 @@ import { useStore } from '../context/StoreContext';
 import { categories, getCategory } from '../data/catalog';
 import { formatLocation, provinces } from '../data/zambia';
 import { formatK } from '../utils/format';
+import Icon from '../components/Icon';
 
 const ago = (d) => {
   const days = Math.floor((Date.now() - new Date(d)) / 864e5);
@@ -139,7 +140,7 @@ export function RequestBoard() {
                 {r.budget && ` · around ${formatK(r.budget)} each`}
               </span>
               <span className="small muted">
-                📍 {formatLocation(r)} · {getCategory(r.category)?.name ?? 'Any category'}
+                <Icon name="pin" size={14} className="inline-icon" />{formatLocation(r)} · {getCategory(r.category)?.name ?? 'Any category'}
               </span>
               <span className="small muted">
                 {r.buyerName} · {ago(r.date)} · {r.offerCount} offer{r.offerCount === 1 ? '' : 's'}
@@ -232,7 +233,7 @@ export function RequestDetail() {
           {r.budget && ` · budget around ${formatK(r.budget)} each`}
         </p>
         <p className="muted small">
-          📍 {formatLocation(r)} · {getCategory(r.category)?.name ?? 'Any category'} · posted {ago(r.date)} by {r.buyerName}
+          <Icon name="pin" size={14} className="inline-icon" />{formatLocation(r)} · {getCategory(r.category)?.name ?? 'Any category'} · posted {ago(r.date)} by {r.buyerName}
         </p>
         {r.description && <p className="pre-line">{r.description}</p>}
         <ShareButton title={r.title} text={`Can you supply this? ${r.title} in ${r.town}`} path={`/requests/${r.id}`} />
@@ -249,7 +250,7 @@ export function RequestDetail() {
                     <strong>
                       <Link to={`/store/${o.shopId}`}>{o.shopName}</Link> {o.shopVerified && <span className="verified-badge">✓</span>}
                     </strong>
-                    <div className="small muted">📍 {o.shopTown}</div>
+                    <div className="small muted"><Icon name="pin" size={14} className="inline-icon" />{o.shopTown}</div>
                     {o.note && <div className="small">“{o.note}”</div>}
                     {o.productId && (
                       <Link to={`/product/${o.productId}`} className="link small">

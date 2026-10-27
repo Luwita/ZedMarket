@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { formatLocation } from '../data/zambia';
 import { useIsPhone } from '../phone';
 import { formatK } from '../utils/format';
+import Icon from '../components/Icon';
 
 export const groupByShop = (items) =>
   Object.values(
@@ -64,7 +65,7 @@ export default function Cart() {
             </label>
             <span className="muted small grow">{selectedItems.length} selected</span>
             <button className="link-btn" disabled={!selectedItems.length} onClick={saveSelectedForLater}>
-              ♡ Save for later
+              Save for later
             </button>
             <button className="link-btn danger" disabled={!selectedItems.length} onClick={removeSelected}>
               Remove selected
@@ -75,7 +76,7 @@ export default function Cart() {
               {shop && (
                 <Link to={`/store/${shop.id}`} className="cart-shop">
                   <span>{shop.logo ?? '🏪'}</span> <strong>{shop.name}</strong>
-                  <span className="muted small">📍 {formatLocation(shop)}</span>
+                  <span className="muted small"><Icon name="pin" size={14} className="inline-icon" />{formatLocation(shop)}</span>
                 </Link>
               )}
               {lines.map(({ key, product, choice, qty, price, total, quoteId, selected }) => {

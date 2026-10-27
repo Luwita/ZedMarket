@@ -4,7 +4,7 @@ import * as api from '../api';
 import { useStore } from '../context/StoreContext';
 
 // "Ask the shop" button that opens a message box and starts (or continues) a conversation.
-export default function AskShop({ shop, product, label = '💬 Ask the shop' }) {
+export default function AskShop({ shop, product, label = 'Ask the shop' }) {
   const { user, myShop } = useStore();
   const navigate = useNavigate();
   const { pathname } = useLocation();
