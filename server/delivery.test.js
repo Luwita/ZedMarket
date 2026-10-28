@@ -29,7 +29,7 @@ async function api(method, url, body, token) {
   return out;
 }
 
-// Signs in through the stand-in for Neon Auth (see testing/auth.js).
+// Signs in through the stand-in for Clerk (see testing/auth.js).
 async function signIn(phone, extra = {}) {
   return testSignIn(api, phone, extra);
 }
@@ -69,7 +69,7 @@ before(async () => {
   base = `http://localhost:${server.address().port}`;
 
   owner = await signIn(OWNER_PHONE, { name: 'Noah' });
-  await api('POST', '/api/admin/staff', { phone: '0955123456', name: 'Mapalo' }, owner.token);
+  await api('POST', '/api/admin/staff', { email: '955123456@example.test', name: 'Mapalo' }, owner.token);
   staff = await signIn('0955123456');
   seller = await signIn('0977100100', { name: 'Mutinta' });
   seller.shopId = (

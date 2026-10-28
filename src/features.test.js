@@ -138,7 +138,9 @@ test('joining with an invite link gives the new customer a welcome voucher', asy
   type('Email', 'natasha@example.com');
   type('Password', 'Natasha-2026');
   fireEvent.click(screen.getAllByRole('button', { name: 'Create account' }).at(-1));
-  fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+  // Clerk emails a code to confirm the address.
+  type(await screen.findByLabelText('6-digit code').then(() => '6-digit code'), '123456');
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
   await waitFor(() => expect(api.__db().vouchers).toHaveLength(1));
   expect(api.__db().users[1].referredBy).toBe('usr_1');
@@ -175,7 +177,9 @@ test('a customer changes their password, and resets a forgotten one with an emai
   type('Email', 'mutale@example.com');
   type('Password', 'First-pass-1');
   fireEvent.click(screen.getAllByRole('button', { name: 'Create account' }).at(-1));
-  fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+  // Clerk emails a code to confirm the address.
+  type(await screen.findByLabelText('6-digit code').then(() => '6-digit code'), '123456');
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
   fireEvent.click(await screen.findByRole('button', { name: 'Password & privacy' }));
   type('Current password', 'wrong-pass-1');

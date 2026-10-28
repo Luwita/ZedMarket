@@ -19,6 +19,7 @@ import Checkout from './pages/Checkout';
 import Home from './pages/Home';
 import HomeApp from './pages/HomeApp';
 import Login from './pages/Login';
+import SsoCallback from './pages/SsoCallback';
 import Delivery from './pages/Delivery';
 import { Receipt, Statement } from './pages/Documents';
 import Legal from './pages/Legal';
@@ -165,6 +166,7 @@ export default function App() {
             <Route path="/requests" element={<RequestBoard />} />
             <Route path="/requests/:id" element={<RequestDetail />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/sso-callback" element={<SsoCallback />} />
             <Route path="/account" element={<Account />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

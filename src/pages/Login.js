@@ -1,24 +1,22 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import PhoneLink from '../components/PhoneLink';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 
 // Where a signed-in user lands: shop owners go to their dashboard, or to shop setup if they have no shop yet.
 const homeFor = (user) =>
   user.isAdmin ? '/admin' : user.shopId ? '/seller' : user.accountType === 'seller' ? '/sell#register' : '/account';
 
-// Sign-up and sign-in, run by Neon Auth: email and password, or Google. A phone number is added right after
-// sign-up (by SMS code); once added, it can also be used to sign in with a code.
+// Sign-up and sign-in, run by Clerk: email and password, or Google. A new account (and a sign-in from a new device)
+// confirms the email address with a 6-digit code.
 export default function Login() {
-  const { user, signUp, signIn, signInWithGoogle, requestPasswordReset, resetPassword } = useStore();
-  const navigate = useNavigate();
+  const { user, signUp, signIn, verifyCode, signInWithGoogle, requestPasswordReset, resetPassword } = useStore();
   const [params] = useSearchParams();
   const next = params.get('next');
   const ref = params.get('ref') ?? '';
   // Sign-up links and QR codes: ?join=seller (shop owners) or ?join=buyer (customers).
   const join = params.get('join');
   const [mode, setMode] = useState(ref || join ? 'register' : 'login');
-  const [justJoined, setJustJoined] = useState(false); // show "add your phone" before moving on
+  const [code, setCode] = useState('');
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -33,23 +31,6 @@ export default function Login() {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const destination = (u) => (next?.startsWith('/') ? next : homeFor(u));
 
-  if (user && justJoined && !user.phone) {
-    return (
-      <div className="container section narrow">
-        <div className="card form-card auth">
-          <h2>Add your phone number</h2>
-          <p className="muted">
-            We text you about your orders, and shops use it to reach you. You can also sign in with a code sent to
-            this number.
-          </p>
-          <PhoneLink onDone={() => navigate(destination(user), { replace: true })} />
-          <button className="link-btn block center" onClick={() => navigate(destination(user), { replace: true })}>
-            Skip for now
-          </button>
-        </div>
-      </div>
-    );
-  }
   // Also performs the redirect right after signing in, so there is only one navigation.
   if (user) return <Navigate to={destination(user)} replace />;
 
@@ -70,12 +51,21 @@ export default function Login() {
       if (form.name.trim().length < 2) return setError('Enter your full name');
       if (form.password.length < 8) return setError('Use a password of at least 8 characters');
       run(async () => {
-        setJustJoined(true);
-        await signUp({ ...form, name: form.name.trim(), email: form.email.trim(), referralCode: form.referralCode.trim().toUpperCase() });
+        const step = await signUp({ ...form, name: form.name.trim(), email: form.email.trim(), referralCode: form.referralCode.trim().toUpperCase() });
+        if (step?.needsCode) askForCode();
       });
     } else {
-      run(() => signIn({ email: form.email.trim(), password: form.password }));
+      run(async () => {
+        const step = await signIn({ email: form.email.trim(), password: form.password });
+        if (step?.needsCode) askForCode();
+      });
     }
+  };
+
+  const askForCode = () => {
+    setMode('code');
+    setCode('');
+    setBusy(false);
   };
 
   const tabs = (
@@ -102,7 +92,7 @@ export default function Login() {
     const save = (e) => {
       e.preventDefault();
       if (reset.password.length < 8) return setError('Use a new password of at least 8 characters');
-      run(() => resetPassword({ email: form.email.trim(), otp: reset.code.trim(), password: reset.password }));
+      run(() => resetPassword({ otp: reset.code.trim(), password: reset.password }));
     };
     return (
       <div className="container section narrow">
@@ -147,15 +137,31 @@ export default function Login() {
     );
   }
 
-  if (mode === 'phone') {
+  if (mode === 'code') {
+    const confirm = (e) => {
+      e.preventDefault();
+      if (!/^\d{6}$/.test(code.trim())) return setError('Enter the 6-digit code from the email');
+      run(() => verifyCode(code.trim()));
+    };
     return (
       <div className="container section narrow">
         <div className="card form-card auth">
-          {tabs}
-          <p className="muted small">For accounts that already have this phone number added.</p>
-          <PhoneLink link={false} />
-          <button className="link-btn block center" onClick={() => setMode('login')}>
-            Sign in with email instead
+          <h2>Check your email</h2>
+          <form onSubmit={confirm} noValidate>
+            <p className="muted small">
+              We sent a 6-digit code to <strong>{form.email}</strong>. It can take a minute to arrive; look in spam too.
+            </p>
+            <div className="field">
+              <label htmlFor="c-code">6-digit code</label>
+              <input id="c-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} autoFocus />
+            </div>
+            {error && <p className="error">{error}</p>}
+            <button className="btn btn-primary btn-block" disabled={busy}>
+              {busy ? 'Checking…' : 'Confirm'}
+            </button>
+          </form>
+          <button className="link-btn block center" onClick={() => { setMode('login'); setError(null); }}>
+            Back
           </button>
         </div>
       </div>
@@ -224,11 +230,6 @@ export default function Login() {
         >
           Continue with Google
         </button>
-        {mode === 'login' && (
-          <button className="btn btn-outline btn-block" disabled={busy} onClick={() => setMode('phone')}>
-            Sign in with a code to my phone
-          </button>
-        )}
         <p className="muted small center">
           By continuing you agree to our <Link to="/legal/terms">terms</Link> and{' '}
           <Link to="/legal/privacy">privacy policy</Link>.

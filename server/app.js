@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import express from 'express';
-import { authenticate, neonAuthWebhook, neonDeleteIdentity, neonPhoneLookup, sessionRoutes } from './auth.js';
-import { authProxy, devCookieSecret, finishOAuthSignIn, neonTokenVerifier, neonWebhookVerifier } from './neonAuth.js';
+import { authenticate, sessionRoutes } from './auth.js';
+import { clerkDeleteIdentity, clerkTokenVerifier } from './clerkAuth.js';
 import { HttpError } from './http.js';
 import { catalogRoutes } from './routes/catalog.js';
 import { accountRoutes } from './routes/account.js';
@@ -21,34 +21,24 @@ import { sellerRoutes } from './routes/seller.js';
 import { adminToolRoutes, bannerRoutes } from './routes/adminTools.js';
 import { adminControlRoutes } from './routes/adminControl.js';
 import { getSettings } from './settings.js';
-import { sendNotificationsBySms } from './notify.js';
 import { deliveryAdminRoutes, deliveryRoutes } from './routes/delivery.js';
 
-// `auth`: Neon Auth settings. `baseUrl` is the branch's Neon Auth URL; tests pass their own `verifyToken`,
-// `lookupPhone` and `verifyWebhook` instead.
+// `auth`: Clerk settings. `secretKey` is the CLERK_SECRET_KEY; tests pass their own `verifyToken`, `lookupPhone` and
+// `deleteIdentity` instead.
 export function createApp(
   db,
-  { uploadDir, buildDir, sms, email, exposeCodes = false, adminPhones = [], adminEmails = [], production = false, auth = {} } = {},
+  { uploadDir, buildDir, adminPhones = [], adminEmails = [], production = false, auth = {} } = {},
 ) {
   const {
-    baseUrl,
-    cookieSecret = devCookieSecret(),
-    verifyToken = baseUrl ? neonTokenVerifier(baseUrl) : null,
-    lookupPhone = neonPhoneLookup(db),
-    verifyWebhook = baseUrl ? neonWebhookVerifier(baseUrl) : async () => false,
-    deleteIdentity = neonDeleteIdentity(db),
+    secretKey,
+    verifyToken = secretKey ? clerkTokenVerifier({ secretKey }) : null,
+    lookupPhone,
+    deleteIdentity = secretKey ? clerkDeleteIdentity({ secretKey }) : async () => {},
   } = auth;
   const app = express();
-  sendNotificationsBySms(sms ?? null);
   app.disable('x-powered-by');
-  app.set('trust proxy', 1); // behind the host's HTTPS proxy, so cookies and links use https
+  app.set('trust proxy', 1); // behind the host's HTTPS proxy, so links use https
 
-  // These two read the raw request, so they come before JSON parsing.
-  if (baseUrl) {
-    app.use('/api/auth', authProxy({ baseUrl, cookieSecret }));
-    app.use(finishOAuthSignIn({ baseUrl, cookieSecret })); // the page Google sends people back to
-  }
-  app.use('/api/webhooks/neon-auth', neonAuthWebhook(db, { sms, email, exposeCodes, verifyWebhook, adminPhones, adminEmails }));
   app.use(express.json({ limit: '3mb' })); // room for one base64 photo
 
   app.get('/api/health', async (_req, res) => {
@@ -57,7 +47,7 @@ export function createApp(
   });
 
   app.use('/api', authenticate(db, { adminPhones, adminEmails, production, verifyToken, lookupPhone }));
-  app.use('/api/session', sessionRoutes(db, { exposeCodes, adminPhones, adminEmails }));
+  app.use('/api/session', sessionRoutes(db));
   app.use('/api', catalogRoutes(db));
   app.use('/api', reviewRoutes(db));
   app.use('/api/orders', orderRoutes(db));
@@ -75,7 +65,7 @@ export function createApp(
   app.use('/api/banners', bannerRoutes(db));
   // Public: commission rate and voucher amounts, shown in the seller terms and on the invite page.
   app.get('/api/settings', async (_req, res) => res.json(await getSettings(db)));
-  app.use('/api/admin', adminRoutes(db, { adminPhones, adminEmails, sms, exposeCodes, authReady: !!baseUrl, deleteIdentity }));
+  app.use('/api/admin', adminRoutes(db, { adminPhones, adminEmails, authReady: !!verifyToken, deleteIdentity }));
   app.use('/api/notifications', notificationRoutes(db));
   app.use('/api/support', supportRoutes(db));
   app.use('/api/buying-requests', buyingRequestRoutes(db));

@@ -23,7 +23,7 @@ test('filters products by province and town', async () => {
   expect(screen.queryByText(/Tecno Spark/)).not.toBeInTheDocument();
 });
 
-test('signing up as a shop owner with email, then adding a phone by SMS code, leads to shop setup', async () => {
+test('signing up as a shop owner with email and an emailed code leads to shop setup', async () => {
   renderAt('/login');
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
   type('Full name', 'Mwansa Banda');
@@ -35,19 +35,16 @@ test('signing up as a shop owner with email, then adding a phone by SMS code, le
   type('Password', 'Mwansa-2026');
   fireEvent.click(screen.getAllByRole('button', { name: 'Create account' }).at(-1));
 
-  // Right after signing up: add a phone number with an SMS code (shown on screen in test mode).
-  expect(await screen.findByRole('heading', { name: 'Add your phone number' })).toBeInTheDocument();
-  type('Phone number', '0977 123 456');
-  fireEvent.click(screen.getByRole('button', { name: 'Send me a code' }));
-  expect(await screen.findByText(/Your code is/)).toHaveTextContent('123456');
+  // Right after signing up: confirm the email address with the emailed code.
+  expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument();
   type('6-digit code', '123456');
-  fireEvent.click(screen.getByRole('button', { name: 'Add phone number' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
-  // Lands on shop setup with name and phone filled in.
+  // Lands on shop setup with the name filled in.
   expect(await screen.findByRole('heading', { name: 'Open your shop', level: 2 })).toBeInTheDocument();
   expect(window.location.pathname).toBe('/sell');
   expect(screen.getByLabelText('Your full name (as on your NRC)')).toHaveValue('Mwansa Banda');
-  expect(screen.getByLabelText('Phone (WhatsApp)')).toHaveValue('0977123456');
+  type('Phone (WhatsApp)', '0977123456');
 
   type('Shop name', 'Mwansa Hardware');
   type('Province', 'eastern', { selector: '#shop-province' });
@@ -119,7 +116,7 @@ test('checkout asks guests to sign in first', async () => {
   localStorage.setItem('zedmarket.cart', JSON.stringify([{ id: 'p1', qty: 1 }]));
   renderAt('/checkout');
   expect(await screen.findByText('Sign in to check out')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Sign in with your phone' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'Sign in or create an account' })).toHaveAttribute(
     'href',
     '/login?next=/checkout',
   );

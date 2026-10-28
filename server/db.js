@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
 
-// Work to do only once a transaction has been saved (e.g. sending an SMS), so nothing goes out if it rolls back.
+// Work to do only once a transaction has been saved (e.g. sending an email), so nothing goes out if it rolls back.
 function commitHooks() {
   const hooks = [];
   return [(fn) => hooks.push(fn), () => hooks.forEach((fn) => fn())];

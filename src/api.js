@@ -1,37 +1,27 @@
 // Thin client for the Zed Market API. In development, CRA proxies /api to the server on port 4000.
-import { authClient } from './auth';
-import { normalizePhone } from './utils/format';
+import { loadClerk, rememberSignedIn, wasSignedIn } from './auth';
 
-// Accounts are run by Neon Auth. While someone is signed in, each API request carries a short-lived Neon Auth
-// token (15 minutes), fetched again shortly before it runs out. Nobody signed in: no token is asked for.
+// Accounts are run by Clerk. While someone is signed in, each API request carries their Clerk session token (it is
+// renewed automatically). Nobody signed in: no token is asked for.
 let signedIn = false;
-let cached = null; // { token, exp }
-
-const expiryOf = (jwt) => {
-  try {
-    return JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).exp ?? 0;
-  } catch {
-    return 0;
-  }
-};
+let cachedToken = null;
 
 async function authToken() {
   if (!signedIn) return null;
-  if (cached && cached.exp * 1000 > Date.now() + 30e3) return cached.token;
   try {
-    const { data } = await authClient.token();
-    cached = data?.token ? { token: data.token, exp: expiryOf(data.token) } : null;
+    const clerk = await loadClerk();
+    cachedToken = (await clerk.session?.getToken()) ?? null;
   } catch {
-    cached = null;
+    cachedToken = null;
   }
-  return cached?.token ?? null;
+  return cachedToken;
 }
 
-export const getToken = () => (signedIn ? cached?.token ?? 'signed-in' : null);
+export const getToken = () => (signedIn ? cachedToken ?? 'signed-in' : null);
 export function setToken(token) {
   if (!token) {
     signedIn = false;
-    cached = null;
+    cachedToken = null;
   }
 }
 
@@ -66,93 +56,155 @@ async function request(method, path, body) {
   return data;
 }
 
-// ----- Sign-in (Neon Auth) -----
-// Neon Auth answers { data, error }; some calls throw instead. Either way the person sees a readable message.
-async function neon(call, fallback) {
-  let result;
+// ----- Sign-in (Clerk) -----
+// Clerk reports problems as { errors: [{ message, longMessage }] }. Either way the person sees a readable message.
+async function clerkCall(call, fallback) {
   try {
-    result = await call();
+    return await call(await loadClerk());
   } catch (err) {
-    throw new ApiError(err.status ?? 0, err.message || fallback);
+    const first = err?.errors?.[0];
+    throw new ApiError(err?.status ?? 400, first?.longMessage || first?.message || err?.message || fallback);
   }
-  if (result?.error) throw new ApiError(result.error.status ?? 400, result.error.message || fallback);
-  return result?.data;
 }
-const asE164 = (phone) => `+260${normalizePhone(phone)}`;
-const startSession = () => {
-  signedIn = true;
-  cached = null;
-};
 
-// Whether someone is signed in on this browser (also finishes a Google sign-in on the page it returns to).
+// Which email-code step is waiting: 'signUp' (confirm a new address) or 'signIn' (a new device is checked).
+let waiting = null;
+
+async function finish(clerk, attempt) {
+  if (attempt.status !== 'complete') throw new Error("We couldn't finish signing you in. Please try again.");
+  await clerk.setActive({ session: attempt.createdSessionId });
+  rememberSignedIn(true);
+  signedIn = true;
+  cachedToken = null;
+  waiting = null;
+}
+
+// Whether someone is signed in on this browser.
 export async function restoreSession() {
-  try {
-    const { data } = await authClient.getSession();
-    signedIn = !!data?.session;
-  } catch {
-    signedIn = false;
+  signedIn = false;
+  if (wasSignedIn()) {
+    try {
+      signedIn = !!(await loadClerk()).session;
+      if (!signedIn) rememberSignedIn(false);
+    } catch {
+      signedIn = false; // offline or Clerk unreachable: stay a guest, keep the hint for next time
+    }
   }
-  cached = null;
+  cachedToken = null;
   return signedIn;
 }
 
+// Makes the account and emails a 6-digit code to confirm the address; `verifyCode` finishes the sign-up.
 export async function signUp({ name, email, password }) {
-  await neon(() => authClient.signUp.email({ name, email, password }), "Couldn't create your account");
-  startSession();
+  const [firstName, ...rest] = name.trim().split(/\s+/);
+  return clerkCall(async (clerk) => {
+    const attempt = await clerk.client.signUp.create({
+      emailAddress: email,
+      password,
+      firstName,
+      lastName: rest.join(' ') || undefined,
+    });
+    if (attempt.status === 'complete') {
+      await finish(clerk, attempt);
+      return {};
+    }
+    await attempt.prepareEmailAddressVerification({ strategy: 'email_code' });
+    waiting = 'signUp';
+    return { needsCode: true };
+  }, "Couldn't create your account");
 }
 
+// Signs in with email and password. On a device Clerk doesn't know yet it first emails a code (`needsCode`).
 export async function signIn({ email, password }) {
-  await neon(() => authClient.signIn.email({ email, password }), "Couldn't sign you in");
-  startSession();
+  return clerkCall(async (clerk) => {
+    const attempt = await clerk.client.signIn.create({ identifier: email, password });
+    if (attempt.status === 'complete') {
+      await finish(clerk, attempt);
+      return {};
+    }
+    if (attempt.status === 'needs_client_trust' || attempt.status === 'needs_second_factor') {
+      await attempt.prepareSecondFactor({ strategy: 'email_code' });
+      waiting = 'signIn';
+      return { needsCode: true };
+    }
+    throw new Error("We couldn't sign you in this way. Try Google, or reset your password.");
+  }, "Couldn't sign you in");
 }
 
-// Leaves the page for Google; Google sends the person back to `returnTo` on ZedMarket, signed in.
-export async function signInWithGoogle(returnTo = '/login') {
-  await neon(
-    () => authClient.signIn.social({ provider: 'google', callbackURL: `${window.location.origin}${returnTo}` }),
+// The 6-digit code from the email, for the sign-up or sign-in that asked for it.
+export async function verifyCode(code) {
+  return clerkCall(async (clerk) => {
+    if (waiting === 'signUp') {
+      await finish(clerk, await clerk.client.signUp.attemptEmailAddressVerification({ code }));
+    } else if (waiting === 'signIn') {
+      await finish(clerk, await clerk.client.signIn.attemptSecondFactor({ strategy: 'email_code', code }));
+    } else {
+      throw new Error('Start again: enter your email and password first.');
+    }
+  }, 'That code is not correct');
+}
+
+// Leaves the page for Google; Google sends the person back to /sso-callback, which signs them in and lands on `returnTo`.
+export const signInWithGoogle = (returnTo = '/login') =>
+  clerkCall(
+    (clerk) =>
+      clerk.client.signIn.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl: `${window.location.origin}/sso-callback`,
+        redirectUrlComplete: `${window.location.origin}${returnTo}`,
+      }),
     "Couldn't open Google sign-in",
   );
-}
 
-// Texts a 6-digit code to a phone number: to add it to the signed-in account, or to sign in with it.
-export const sendPhoneCode = (phone) =>
-  neon(() => authClient.phoneNumber.sendOtp({ phoneNumber: asE164(phone) }), "Couldn't send the code. Try again.");
-
-// `link`: add the number to the signed-in account; otherwise sign in with an already-added number.
-export async function verifyPhone({ phone, code, link }) {
-  await neon(
-    () => authClient.phoneNumber.verify({ phoneNumber: asE164(phone), code, ...(link ? { updatePhoneNumber: true } : {}) }),
-    'That code is not correct',
+// Finishes a Google sign-in on the /sso-callback page. `go(path)` moves to the page the person asked for.
+export const finishGoogleSignIn = (go) =>
+  clerkCall(
+    (clerk) =>
+      clerk.handleRedirectCallback(
+        { signInFallbackRedirectUrl: '/login', signUpFallbackRedirectUrl: '/login' },
+        (to) => {
+          rememberSignedIn(!!clerk.session);
+          go(to.startsWith(window.location.origin) ? to.slice(window.location.origin.length) : to);
+        },
+      ),
+    "Couldn't finish signing in with Google",
   );
-  startSession();
-}
 
 // Changes the password of the signed-in account (and signs out its other devices).
 export const changePassword = ({ currentPassword, newPassword }) =>
-  neon(
-    () => authClient.changePassword({ currentPassword, newPassword, revokeOtherSessions: true }),
+  clerkCall(
+    (clerk) => clerk.user.updatePassword({ currentPassword, newPassword, signOutOfOtherSessions: true }),
     "Couldn't change the password",
   );
 
-// Forgotten password: a 6-digit code is emailed, then the code sets a new password.
+// Forgotten password: a 6-digit code is emailed, then the code sets a new password and signs the person in.
 export const requestPasswordReset = (email) =>
-  neon(() => authClient.emailOtp.requestPasswordReset({ email }), "Couldn't send the code. Try again.");
-export const resetPassword = ({ email, otp, password }) =>
-  neon(() => authClient.emailOtp.resetPassword({ email, otp, password }), 'That code is not correct');
+  clerkCall(
+    (clerk) => clerk.client.signIn.create({ strategy: 'reset_password_email_code', identifier: email }),
+    "Couldn't send the code. Try again.",
+  );
+export const resetPassword = ({ otp, password }) =>
+  clerkCall(
+    async (clerk) =>
+      finish(
+        clerk,
+        await clerk.client.signIn.attemptFirstFactor({ strategy: 'reset_password_email_code', code: otp, password }),
+      ),
+    'That code is not correct',
+  );
 
 export async function logout() {
   try {
-    await authClient.signOut();
+    await (await loadClerk()).signOut();
   } finally {
+    rememberSignedIn(false);
     signedIn = false;
-    cached = null;
+    cachedToken = null;
   }
 }
 
 export const me = () => request('GET', '/session/me');
 export const welcome = (details) => request('POST', '/session/welcome', details);
-// Test mode only: the code last sent to a phone number, shown on screen while SMS isn't paid for.
-export const testCode = (to) => request('GET', `/session/test-code?to=${encodeURIComponent(to)}`);
 
 export const getShops = () => request('GET', '/shops');
 // Search, filter and page products. Empty values are left out of the query string.

@@ -20,39 +20,32 @@ To remove every shop, product and order (keeping user accounts, staff and settin
 `npm run reset:catalog -- --yes`. A backup of the local database is saved in `server/.data/` first. Delete
 `server/.data/` to start over completely.
 
-## Sign-in (Neon Auth)
+## Sign-in (Clerk)
 
-Accounts are run by [Neon Auth](https://neon.com/docs/auth/overview) (Managed Better Auth), on the same Neon
-branch as the database:
+Accounts are run by [Clerk](https://clerk.com), which has a free plan. There is no SMS: nothing is texted, and Clerk
+sends the emails itself.
 
-- **Sign up** with name, email and password, or with Google. Right after, the app asks for a phone number and
-  verifies it with a 6-digit SMS code ("Skip for now" is possible; My account keeps asking). Once added, the number
-  can also be used to sign in with a code. Neon Auth has no sign-up with only a phone number.
-- **The browser talks to Neon Auth through this server** (`/api/auth/*`, [server/neonAuth.js](server/neonAuth.js)),
-  so the sign-in cookies belong to ZedMarket's own address and browsers that block other sites' cookies keep people
-  signed in. Every other API request carries a 15-minute Neon Auth token, checked against Neon Auth's public keys.
+- **Set it up once:** in the Clerk dashboard create an application with **Email address + Password** and **Google**
+  turned on. Under **API keys** copy the *Secret key* into `CLERK_SECRET_KEY` (`server/.env`, or Render) and the
+  *Publishable key* into `REACT_APP_CLERK_PUBLISHABLE_KEY` (`.env.local` at the project root, or Render, which must
+  have it before the build runs because the website is built with it). Without them nobody can sign in.
+- **Sign up** with name, email and password, or with Google. Clerk emails a 6-digit code to confirm the address.
+  A sign-in from a new device can also ask for an emailed code. **Forgot password?** emails a code that sets a new
+  one; signed-in people change it under My account → Password & privacy.
+- **The browser signs in with Clerk directly**; it is downloaded only when someone signs in or comes back signed in,
+  so guests browsing on mobile data never fetch it. Every API request carries Clerk's session token, checked here
+  with the secret key ([server/clerkAuth.js](server/clerkAuth.js)).
 - **ZedMarket's own account** (the `users` table: shop, orders, role) is linked by `users.auth_id` and created on
-  the first request. The verified phone number is copied from Neon Auth's `neon_auth.user` table. Someone staff added
-  by phone takes over that account when they verify the same number. Deleting an account also deletes the Neon Auth
-  sign-in.
-- **SMS codes** are sent by this server: Neon Auth calls the `send.otp` webhook at `/api/webhooks/neon-auth`
-  (signature checked), and the code goes out through Africa's Talking. The webhook needs a public HTTPS address, so
-  phone codes work on the live site only. Register it on the production branch:
-  `neon neon-auth config webhook update --branch production --enabled --url https://<site>/api/webhooks/neon-auth --enabled-events send.otp`
-  and add the site to the trusted domains: `neon neon-auth domain add https://<site> --branch production`.
-  With `send.otp` subscribed, Neon Auth stops sending its own emailed codes too, so the same webhook emails them
-  through [Resend](https://resend.com) (`RESEND_API_KEY`, `EMAIL_FROM` on a verified domain). That powers
-  **Forgot password?** on the sign-in page: an emailed 6-digit code sets a new password. Signed-in people change
-  their password under My account → Password & privacy.
-- **Owners** are `ADMIN_PHONES` (once verified on the account) and `ADMIN_EMAILS` (once Neon Auth has verified the
-  address; on a development computer also before).
-- **Test mode:** `SHOW_SIGNIN_CODES=1` also shows phone codes on screen, except for staff and owners, whose codes are
-  written in the server log (Render → Logs). Anyone could then sign in as any customer with a linked phone, so
-  remove it before launch; the admin Overview warns while it is on.
-- **Phone app (Expo):** Google refuses sign-in inside app web views, so the phone app uses email or a phone code.
-  On a development computer reached over Wi-Fi (`http://192.168…`) the secure sign-in cookies aren't kept; sign in
-  on `http://localhost` or on the live HTTPS site. While no SMS provider is connected, the code is printed in the API
-terminal and shown on the sign-in screen (development only); once one is connected it is only sent by SMS.
+  the first request, with the email and name read from Clerk. Deleting an account also deletes the Clerk sign-in.
+- **Owners** are the `ADMIN_EMAILS` addresses, once Clerk has verified them (on a development computer also before).
+  **Staff** are added by owners in the admin Staff tab by the email address they sign in with; they take over that
+  account when they sign in with that verified address.
+- **Phone numbers** are no longer verified or used to sign in. Shops still give a phone number for buyers to reach
+  them. Updates about orders and payments appear in the app under Notifications.
+- **Phone app (Expo):** Google refuses sign-in inside app web views, so the phone app uses email and password.
+
+Add the live site's address to Clerk (Domains) and, for Google, follow Clerk's *Social connections → Google* steps.
+
 
 ```bash
 npm test             # React tests (use an in-memory fake API)
@@ -82,10 +75,8 @@ React app (src/)  ──/api──▶  Express API (server/)  ──SQL──▶
 
 | Method | Path | Who |
 | --- | --- | --- |
-| * | `/api/auth/*` | anyone: Neon Auth (sign-up, sign-in, sign-out, phone codes, tokens), passed through |
 | GET | `/api/session/me` | signed in: the ZedMarket account |
 | POST | `/api/session/welcome` | signed in: name, kind of account and invite code, right after sign-up |
-| POST | `/api/webhooks/neon-auth` | Neon Auth only (signed): delivers SMS sign-in codes |
 | GET | `/api/shops`, `/api/shops/:id`, `/api/products/:id`, `/api/stats/provinces` | anyone |
 | GET | `/api/products?q=&cat=&prov=&town=&shop=&sort=&page=&limit=` | anyone: search, filter, sort, page |
 | GET | `/api/products/:id/reviews`, `/api/shops/:id/reviews` | anyone |
@@ -120,7 +111,7 @@ React app (src/)  ──/api──▶  Express API (server/)  ──SQL──▶
 Copy `server/.env.example` to `server/.env` to change settings. For production:
 
 1. Create a Postgres database (e.g. Neon, Supabase or Render) and set `DATABASE_URL`.
-2. Set `NODE_ENV=production`, `ADMIN_PHONES` and the Africa's Talking settings.
+2. Set `NODE_ENV=production`, `ADMIN_EMAILS` and `CLERK_SECRET_KEY`, and build with `REACT_APP_CLERK_PUBLISHABLE_KEY`.
 3. `npm run build`, then `npm run server`. The API serves the built app too, so one process is enough.
 
 Product photos are stored in the database, so nothing needs a permanent disk. Node.js 22.9 or newer is needed.
@@ -139,7 +130,7 @@ in `server/.data/`. `npm run reset:catalog` only ever touches the local database
 
 [render.yaml](render.yaml) describes the service (`zedmarket`, Frankfurt). In Render choose **New → Blueprint**, pick
 this repository, and fill in the settings it asks for: `DATABASE_URL` and `DATABASE_URL_UNPOOLED` (the
-`production` branch's addresses, pasted without quotes), `ADMIN_PHONES`, `AT_USERNAME` and `AT_API_KEY`. In
+`production` branch's addresses, pasted without quotes), `ADMIN_EMAILS`, `CLERK_SECRET_KEY` and `REACT_APP_CLERK_PUBLISHABLE_KEY`. In
 production the server refuses to start without a `postgresql://` `DATABASE_URL`, and says so in the log. Every push to `main` deploys again; database changes are applied automatically when the server
 starts. On Render's free plan the server sleeps after a while without visitors and takes up to a minute to wake.
 
@@ -236,9 +227,9 @@ Market in the payouts.)
 ## Admin panel
 
 Staff use `/admin` and land there when they sign in. Staff accounts run the marketplace: they can't open or own a
-shop (a shop owner who joins the team needs a different phone number).
+shop (a shop owner who joins the team needs a different email address).
 
-- **Owners** are the numbers in `ADMIN_PHONES` (in `server/.env`), checked on every request, so removing a number
+- **Owners** are the addresses in `ADMIN_EMAILS` (in `server/.env`), checked on every request, so removing an address
   takes away access immediately. Owners can't be suspended or removed from inside the app.
 - **Staff** are added and removed by owners in the **Staff** tab. They can do everything else in the panel.
 - **Settings** (owners only): commission rate, welcome and referral voucher amounts, voucher minimum spend and how
@@ -248,7 +239,7 @@ shop (a shop owner who joins the team needs a different phone number).
   a courier confirms by phone). Each needs a reason, which the shop is told and the log keeps.
 
 - **Overview** of what needs attention: disputes, refunds to pay, shops to verify, parcels not sent after 2 days.
-  A **Before you launch** list at the top shows what is still not set up (live SMS, commission rate, where shops
+  A **Before you launch** list at the top shows what is still not set up (sign-in keys, commission rate, where shops
   pay commission, courier rates, Zed Market Points, shops without a Mobile Money number) and disappears when
   everything is done.
 - **Shops**: every new shop waits for approval before buyers can see it. Applicants give their full name, NRC
@@ -344,33 +335,6 @@ Yango towns, pay on delivery, or switch a courier off. Blank fees mean the couri
 Saved rates are stored in the database and used by checkout and the server straight away; past orders keep the fee
 they were charged. Each courier shows "⚠ not confirmed" until it has been saved.
 
-## SMS (Africa's Talking)
-
-Sign-in codes are sent by SMS through [Africa's Talking](https://africastalking.com). Set these in `server/.env`
-(see `server/.env.example`) and restart the API:
-
-| Setting | Testing | Live |
-| --- | --- | --- |
-| `AT_USERNAME` | `sandbox` | your app's username |
-| `AT_API_KEY` | the sandbox API key | the live app's API key |
-| `AT_SENDER_ID` | leave out | your approved sender ID (optional) |
-
-**Testing with your own Android phone (free):** install [SMS Gateway for Android](https://sms-gate.app), turn on
-**Cloud Server**, tap **Offline** so it says **Online**, and put the username and password it shows in `server/.env`
-as `SMS_GATEWAY_USER` and `SMS_GATEWAY_PASS`. Texts are then sent from that phone's SIM at its normal SMS rate or
-bundle. The phone must stay on and online, so use this for testing only; it takes priority over Africa's Talking
-while the two lines are set.
-
-The same connection also sends a text copy of the notifications people must not miss: new orders, Mobile Money
-payment details and confirmations, parcels sent or ready to collect, cancellations, returns, refunds, payouts, price
-quotes and offers, and decisions about a shop. Each is one plain SMS (160 characters). Vouchers, announcements,
-listing changes and support replies stay in the app only, so a campaign to everyone never sends thousands of texts.
-A text that can't be sent never blocks the order; the notification is still in the app.
-
-Check the connection with `npm run sms:test -- 0977123456`. The API window shows which SMS provider is in use when it
-starts. Without these settings, codes are printed in the API window instead. If a message can't be sent, the
-person sees "We couldn't send the SMS" and can try again straight away; the reason is written in the API window.
-
 ## Search
 
 Search runs in Postgres with the `pg_trgm` extension: it tolerates typos in what the shopper typed (solr → Solar,
@@ -387,10 +351,9 @@ the dashboard.
 
 ## Still to do before launch
 
-- **SMS provider:** connected through Africa's Talking (see above); add your live `AT_USERNAME` and `AT_API_KEY`
-  to `server/.env` before launch. Without them no sign-in code or order text is sent.
 - **Commission account:** save the Mobile Money number shops send their commission to in Admin → Payouts.
-- **WhatsApp copies of notifications**: important notifications go by SMS; WhatsApp needs a WhatsApp Business account.
+- **Text or WhatsApp copies of notifications**: notifications are in the app only. Texts or WhatsApp (a WhatsApp
+  Business account) can be added later.
 - **Legal review:** the pages under `/legal` are drafts and must be reviewed by a Zambian lawyer. Register with the
   Office of the Data Protection Commissioner as required.
 - **Tax:** receipts are not ZRA Smart Invoices. Shops that must issue fiscal invoices still need to do so, and

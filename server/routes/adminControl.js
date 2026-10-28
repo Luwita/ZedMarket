@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
 import { normalizePhone } from '../../src/utils/format.js';
@@ -36,37 +37,38 @@ export function adminControlRoutes(db, { adminPhones = [], adminEmails = [] } = 
       ...rows.map((r) => ({
         id: r.id,
         name: r.name,
-        phone: shown(r.phone),
+        phone: r.phone ? shown(r.phone) : null,
         email: r.email,
         role: isOwner(r) ? 'owner' : 'staff',
         since: r.staff_since ?? r.created_at,
       })),
-      // Owners listed in ADMIN_PHONES who haven't signed in yet.
+      // Owners listed in ADMIN_PHONES (older setups) who haven't signed in yet.
       ...[...owners]
         .filter((p) => !signedUp.has(p))
         .map((p) => ({ id: null, name: 'Not signed in yet', phone: `0${p}`, role: 'owner', since: null })),
     ]);
   });
 
+  // Staff are added by the email address they sign in with. They take over the account when they sign in with
+  // that (verified) address and land in the admin panel.
   router.post('/staff', requireOwner, async (req, res) => {
     const b = parse(
       z.object({
-        phone: z.string().refine((p) => /^[79]\d{8}$/.test(normalizePhone(p)), 'Enter a valid Zambian mobile number'),
+        email: z.string().trim().toLowerCase().email('Enter the email address they sign in with').max(120),
         name: z.string().trim().max(80).optional(),
       }),
       req.body,
     );
-    const phone = normalizePhone(b.phone);
-    if (owners.has(phone)) throw new HttpError(409, 'That number is already an owner');
+    if (ownerEmails.has(b.email)) throw new HttpError(409, 'That address is already an owner');
     const added = await db.tx(async (t) => {
-      let [user] = await t.query('SELECT * FROM users WHERE phone = $1 AND deleted_at IS NULL', [phone]);
+      let [user] = await t.query('SELECT * FROM users WHERE lower(email) = $1 AND deleted_at IS NULL', [b.email]);
       if (user?.is_staff) throw new HttpError(409, `${user.name} is already staff`);
       if (user) {
         const [shop] = await t.query('SELECT name FROM shops WHERE owner_id = $1', [user.id]);
         if (shop) {
           throw new HttpError(
             409,
-            `${user.name} owns the shop ${shop.name}. Staff accounts can't have a shop, so use another number.`,
+            `${user.name} owns the shop ${shop.name}. Staff accounts can't have a shop, so use another address.`,
           );
         }
         [user] = await t.query(
@@ -74,14 +76,13 @@ export function adminControlRoutes(db, { adminPhones = [], adminEmails = [] } = 
           [user.id],
         );
       } else {
-        // They sign in later with this number and land in the admin panel.
         [user] = await t.query(
-          `INSERT INTO users (id, phone, name, account_type, referral_code, is_staff, staff_since)
+          `INSERT INTO users (id, email, name, account_type, referral_code, is_staff, staff_since)
            VALUES ($1, $2, $3, 'admin', $4, true, now()) RETURNING *`,
-          [newId('usr'), phone, b.name || 'Zed Market staff', `ZS${phone}`],
+          [newId('usr'), b.email, b.name || 'Zed Market staff', `ZS${randomBytes(4).toString('hex').toUpperCase()}`],
         );
       }
-      await logAdmin(t, req.user.id, 'staff added', 'user', user.id, `0${phone}`);
+      await logAdmin(t, req.user.id, 'staff added', 'user', user.id, b.email);
       await notify(t, user.id, {
         kind: 'shop',
         title: 'You are now Zed Market staff',
@@ -90,17 +91,17 @@ export function adminControlRoutes(db, { adminPhones = [], adminEmails = [] } = 
       });
       return user;
     });
-    res.status(201).json({ id: added.id, name: added.name, phone: `0${phone}`, role: 'staff' });
+    res.status(201).json({ id: added.id, name: added.name, email: b.email, role: 'staff' });
   });
 
   router.delete('/staff/:id', requireOwner, async (req, res) => {
     await db.tx(async (t) => {
       const [user] = await t.query('SELECT * FROM users WHERE id = $1', [req.params.id]);
       if (!user) throw new HttpError(404, 'User not found');
-      if (isOwner(user)) throw new HttpError(409, 'Owners are set in ADMIN_PHONES or ADMIN_EMAILS on the server');
+      if (isOwner(user)) throw new HttpError(409, 'Owners are set in ADMIN_EMAILS on the server');
       if (!user.is_staff) throw new HttpError(409, `${user.name} is not staff`);
       await t.query(`UPDATE users SET is_staff = false, account_type = 'buyer' WHERE id = $1`, [user.id]);
-      await logAdmin(t, req.user.id, 'staff removed', 'user', user.id, shown(user.phone));
+      await logAdmin(t, req.user.id, 'staff removed', 'user', user.id, user.email ?? shown(user.phone));
     });
     res.json({ ok: true });
   });

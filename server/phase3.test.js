@@ -47,7 +47,7 @@ async function api(method, url, body, token) {
   return out;
 }
 
-// Signs in through the stand-in for Neon Auth (see testing/auth.js).
+// Signs in through the stand-in for Clerk (see testing/auth.js).
 async function signIn(phone, name = 'Test') {
   return testSignIn(api, phone, name);
 }

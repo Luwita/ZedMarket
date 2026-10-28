@@ -3,8 +3,6 @@ import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
 import { cleanDatabaseUrl, createDb, migrate } from './db.js';
 import { loadDelivery } from './delivery.js';
-import { smsFromEnv } from './sms.js';
-import { emailFromEnv } from './email.js';
 import { startJobs } from './jobs.js';
 import { backfillDemoProducts, seedIfEmpty } from './seed.js';
 
@@ -45,47 +43,32 @@ if (process.env.SEED_DEMO === '1') {
   else if (applied.includes('002_phase2.sql')) await backfillDemoProducts(db);
 }
 
-const sms = smsFromEnv();
-const email = emailFromEnv();
-// Neon Auth runs sign-up and sign-in. Its URL comes from `neon env pull` locally and the host's settings live.
-const authUrl = process.env.NEON_AUTH_BASE_URL?.trim();
-const cookieSecret = process.env.NEON_AUTH_COOKIE_SECRET?.trim();
-if (production && (!authUrl || !cookieSecret || cookieSecret.length < 32)) {
-  console.error(
-    'Sign-in needs NEON_AUTH_BASE_URL (the branch Neon Auth URL) and NEON_AUTH_COOKIE_SECRET (32+ random characters).',
-  );
+// Clerk runs sign-up and sign-in. The secret key is in the Clerk dashboard under API keys.
+const clerkSecretKey = process.env.CLERK_SECRET_KEY?.trim();
+if (production && !clerkSecretKey) {
+  console.error('Sign-in needs CLERK_SECRET_KEY (Clerk dashboard > API keys). Add it to the server settings.');
   process.exit(1);
 }
-if (!authUrl) console.warn('[auth] NEON_AUTH_BASE_URL is not set: nobody can sign in. Run `neon env pull`.');
+if (!clerkSecretKey) console.warn('[auth] CLERK_SECRET_KEY is not set: nobody can sign in.');
 const list = (v) =>
   (v ?? '')
     .split(',')
     .map((p) => p.trim())
     .filter(Boolean);
 const app = createApp(db, {
-  sms,
-  email,
   uploadDir: process.env.UPLOAD_DIR ?? path.join(root, 'server', '.data', 'uploads'),
   buildDir: path.join(root, 'build'),
-  // Shows sign-in codes on the sign-in screen: on a development computer without an SMS provider, or anywhere
-  // with SHOW_SIGNIN_CODES=1 (testing before SMS is paid for). Staff codes are never shown, only logged.
-  exposeCodes: process.env.SHOW_SIGNIN_CODES === '1' || (!production && sms.provider === 'console'),
-  // Owners, by verified phone number or email address, e.g. ADMIN_PHONES=0977123456 ADMIN_EMAILS=me@example.com
-  adminPhones: list(process.env.ADMIN_PHONES),
+  // Owners, by verified email address, e.g. ADMIN_EMAILS=me@example.com
   adminEmails: list(process.env.ADMIN_EMAILS),
   production,
-  auth: { baseUrl: authUrl, cookieSecret: cookieSecret || undefined },
+  auth: { secretKey: clerkSecretKey },
 });
 
 // Reminds buyers to pay and cancels Mobile Money orders nobody paid for.
 startJobs(db);
 
-if (process.env.SHOW_SIGNIN_CODES === '1') {
-  console.warn('[auth] SHOW_SIGNIN_CODES is on: sign-in codes appear on screen. Remove it before real customers use the site.');
-}
-
 app.listen(port, () =>
   console.log(
-    `Zed Market API on http://localhost:${port} (database: ${db.kind}${db.location ? ` in ${db.location}` : ''}; SMS: ${sms.provider}; email: ${email.provider})`,
+    `Zed Market API on http://localhost:${port} (database: ${db.kind}${db.location ? ` in ${db.location}` : ''})`,
   ),
 );

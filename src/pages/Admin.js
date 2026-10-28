@@ -30,18 +30,8 @@ function Overview({ go }) {
   );
   const todo = s.setup
     ? [
-        s.setup.sms !== 'live' && [
-          s.setup.sms === 'phone'
-            ? 'SMS is sent from your own Android phone, which is for testing only. Put the live AT_USERNAME and AT_API_KEY in server/.env and remove the SMS_GATEWAY lines.'
-            : s.setup.sms === 'sandbox'
-            ? "SMS is on the Africa's Talking sandbox: no real texts are sent. Put the live AT_USERNAME and AT_API_KEY in server/.env."
-            : 'SMS is not connected: sign-in codes and order texts are not sent. Put AT_USERNAME and AT_API_KEY in server/.env.',
-        ],
         s.setup.signInReady === false && [
-          'Sign-in is not set up: add NEON_AUTH_BASE_URL and NEON_AUTH_COOKIE_SECRET to the server settings.',
-        ],
-        s.setup.signInCodesShown && [
-          'Test mode: sign-in codes are shown on screen, so anyone can sign in to any customer or shop account. Remove SHOW_SIGNIN_CODES from the server settings before real customers use the site.',
+          'Sign-in is not set up: add CLERK_SECRET_KEY to the server settings.',
         ],
         !s.setup.commissionSet && ['Set your commission rate.', 'settings'],
         s.setup.commissionAccountSet === false && [

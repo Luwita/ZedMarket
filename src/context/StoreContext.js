@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../api';
 import { unitPrice } from '../data/catalog';
 import { describeChoice, lineKey } from '../data/options';
@@ -60,6 +60,7 @@ export function StoreProvider({ children }) {
   const [catalogVersion, setCatalogVersion] = useState(0);
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const pendingWelcome = useRef(null); // sign-up details kept until the emailed code is entered
   const [orders, setOrders] = useState([]);
   const [shopOrders, setShopOrders] = useState([]);
   const [ordersReady, setOrdersReady] = useState(false);
@@ -103,7 +104,7 @@ export function StoreProvider({ children }) {
     loadShops();
   }, [loadShops, userId]);
 
-  // Whoever is signed in on this browser (Neon Auth keeps the session), as a ZedMarket user.
+  // Whoever is signed in on this browser (Clerk keeps the session), as a ZedMarket user.
   useEffect(() => {
     api
       .restoreSession()
@@ -221,6 +222,13 @@ export function StoreProvider({ children }) {
       const fresh = await api.me();
       setUser(fresh);
       return fresh;
+    };
+    // Saves the sign-up details (if any), loads the account and greets the person.
+    const finishSignIn = async (details, greeting) => {
+      if (details) await api.welcome(details);
+      const signedIn = await refreshMe();
+      setToast(`${greeting}, ${signedIn.name.split(' ')[0]}!`);
+      return signedIn;
     };
     const catalogChanged = () => {
       setCatalogVersion((v) => v + 1);
@@ -352,38 +360,42 @@ export function StoreProvider({ children }) {
       // ----- Sign-in -----
       user,
       authReady,
-      // New account: email and password at Neon Auth, then the ZedMarket details (name, kind, invite code).
+      // New account: email and password at Clerk, which emails a code to confirm the address (`needsCode`; send it to
+      // `verifyCode`). Then the ZedMarket details (name, kind, invite code) are saved.
       async signUp({ name, email, password, accountType, referralCode }) {
-        await api.signUp({ name, email, password });
-        await api.welcome({ name, accountType, referralCode: referralCode || undefined });
-        const signedIn = await refreshMe();
-        setToast(`Welcome, ${signedIn.name.split(' ')[0]}!`);
-        return signedIn;
+        const details = { name, accountType, referralCode: referralCode || undefined };
+        const step = await api.signUp({ name, email, password });
+        if (step?.needsCode) {
+          pendingWelcome.current = details;
+          return { needsCode: true };
+        }
+        return finishSignIn(details, 'Welcome');
       },
       async signIn(credentials) {
-        await api.signIn(credentials);
-        const signedIn = await refreshMe();
-        setToast(`Welcome back, ${signedIn.name.split(' ')[0]}!`);
-        return signedIn;
+        const step = await api.signIn(credentials);
+        if (step?.needsCode) {
+          pendingWelcome.current = null;
+          return { needsCode: true };
+        }
+        return finishSignIn(null, 'Welcome back');
+      },
+      // The emailed code for a sign-up or a sign-in from a new device.
+      async verifyCode(code) {
+        await api.verifyCode(code);
+        const details = pendingWelcome.current;
+        pendingWelcome.current = null;
+        return finishSignIn(details, details ? 'Welcome' : 'Welcome back');
       },
       signInWithGoogle: (returnTo) => api.signInWithGoogle(returnTo),
+      // Back from Google: the ZedMarket account is made the first time the signed-in person uses the API.
+      finishGoogleSignIn: (go) => api.finishGoogleSignIn(go),
       changePassword: (details) => api.changePassword(details),
       requestPasswordReset: (email) => api.requestPasswordReset(email),
-      // Sets a new password with the emailed code, then signs in with it.
-      async resetPassword({ email, otp, password }) {
-        await api.resetPassword({ email, otp, password });
-        await api.signIn({ email, password });
+      // Sets a new password with the emailed code, which also signs the person in.
+      async resetPassword({ otp, password }) {
+        await api.resetPassword({ otp, password });
         const signedIn = await refreshMe();
         setToast('Password changed. Welcome back!');
-        return signedIn;
-      },
-      sendPhoneCode: (phone) => api.sendPhoneCode(phone),
-      testCode: (phone) => api.testCode(phone).catch(() => ({ code: null })),
-      // Signs in with a phone code, or (`link`) adds the verified number to the signed-in account.
-      async verifyPhone(details) {
-        await api.verifyPhone(details);
-        const signedIn = await refreshMe();
-        setToast(details.link ? 'Phone number added' : `Welcome back, ${signedIn.name.split(' ')[0]}!`);
         return signedIn;
       },
       refreshMe,

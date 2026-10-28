@@ -23,7 +23,7 @@ function setup() {
       couriers: ['pickup', 'seller'],
     },
   });
-  const ownerToken = api.__signIn({ name: 'Noah', phone: '0976557939', admin: true });
+  const ownerToken = api.__signIn({ name: 'Noah', phone: '0976557939', admin: true, email: 'noah@example.com', password: 'Noah-pass-1' });
   return { sellerToken, ownerToken };
 }
 
@@ -31,11 +31,8 @@ test('a staff account signs in to the admin panel and cannot open a shop', async
   setup();
   api.setToken(null);
   const page = renderAt('/login');
-  // An account with its phone number added can sign in with a code sent to it.
-  fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a code to my phone' }));
-  type('Phone number', '0976557939');
-  fireEvent.click(screen.getByRole('button', { name: 'Send me a code' }));
-  type(await screen.findByLabelText('6-digit code').then(() => '6-digit code'), '123456');
+  type(await screen.findByLabelText('Email').then(() => 'Email'), 'noah@example.com');
+  type('Password', 'Noah-pass-1');
   fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' }).at(-1));
   expect(await screen.findByText('Needs attention')).toBeInTheDocument();
   expect(window.location.pathname).toBe('/admin');
@@ -63,7 +60,7 @@ test('only owners add staff and change settings', async () => {
   const { ownerToken } = setup();
   api.setToken(ownerToken);
   const owner = renderAt('/admin?tab=staff');
-  type(await screen.findByLabelText('Staff phone').then(() => 'Staff phone'), '0955123456');
+  type(await screen.findByLabelText('Staff email').then(() => 'Staff email'), 'mapalo@example.com');
   type('Staff name', 'Mapalo');
   fireEvent.click(screen.getByRole('button', { name: 'Add staff' }));
   expect(await screen.findByText('Mapalo')).toBeInTheDocument();
@@ -111,16 +108,16 @@ test('a shop owner whose shop is waiting for approval finds it after signing in'
   api.__signIn({
     name: 'Bwalya',
     phone: '0977157869',
+    email: 'bwalya@example.com',
+    password: 'Bwalya-pass-1',
     accountType: 'seller',
     shop: { id: 'shop_new', name: 'Bwalya Hardware', province: 'copperbelt', town: 'Kitwe', area: 'Chisokone', phone: '0977157869', couriers: ['pickup'], verification: 'pending', verified: false },
   });
   api.setToken(null); // the page opens signed out, so only approved shops are loaded
 
   renderAt('/login?next=/seller');
-  fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a code to my phone' }));
-  type('Phone number', '0977157869');
-  fireEvent.click(screen.getByRole('button', { name: 'Send me a code' }));
-  type(await screen.findByLabelText('6-digit code').then(() => '6-digit code'), '123456');
+  type(await screen.findByLabelText('Email').then(() => 'Email'), 'bwalya@example.com');
+  type('Password', 'Bwalya-pass-1');
   fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' }).at(-1));
 
   expect(await screen.findByRole('heading', { name: /Bwalya Hardware/ })).toBeInTheDocument();

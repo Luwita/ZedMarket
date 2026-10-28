@@ -82,8 +82,14 @@ export function __signIn({
   accountType = 'buyer',
   shop,
   admin = false,
+  email,
+  password,
 } = {}) {
   const user = { id: `usr_${db.users.length + 1}`, name, phone, accountType, admin, referralCode: `ZMTEST${db.users.length + 1}` };
+  if (email) {
+    user.email = email;
+    if (password) (db.passwords ??= {})[email] = password;
+  }
   db.users.push(user);
   token = `tok_${user.id}`;
   db.sessions[token] = user.id;
@@ -128,8 +134,8 @@ export const setToken = (t) => {
   token = t;
 };
 
-// ----- Sign-in, standing in for Neon Auth -----
-// Accounts sign up with email and password (`db.passwords`); a phone number is added with the code 123456.
+// ----- Sign-in, standing in for Clerk -----
+// Accounts sign up with email and password (`db.passwords`). A new account confirms its email with the code 123456.
 const startSession = (user) => {
   const t = `tok_${user.id}_${Date.now()}`;
   db.sessions[t] = user.id;
@@ -138,18 +144,32 @@ const startSession = (user) => {
 
 export const restoreSession = async () => !!(token && db.sessions[token]);
 
+let pendingSignUp = null;
+
 export async function signUp({ name, email, password }) {
   db.passwords ??= {};
-  if (db.users.some((u) => u.email === email.toLowerCase())) throw new ApiError(422, 'User already exists');
+  if (db.users.some((u) => u.email === email.toLowerCase())) throw new ApiError(422, 'That email address is taken');
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new ApiError(400, 'Invalid email');
-  const user = {
-    id: `usr_${db.users.length + 1}`,
-    name,
-    email: email.toLowerCase(),
-    phone: null,
-    accountType: 'buyer',
-    referralCode: `ZM${String(db.users.length + 1).padStart(6, '0')}`,
+  pendingSignUp = {
+    user: {
+      id: `usr_${db.users.length + 1}`,
+      name,
+      email: email.toLowerCase(),
+      phone: null,
+      accountType: 'buyer',
+      referralCode: `ZM${String(db.users.length + 1).padStart(6, '0')}`,
+    },
+    password,
   };
+  return { needsCode: true };
+}
+
+export async function verifyCode(code) {
+  if (code !== FAKE_CODE) throw new ApiError(400, 'That code is not correct');
+  if (!pendingSignUp) throw new ApiError(400, 'Start again: enter your email and password first.');
+  db.passwords ??= {};
+  const { user, password } = pendingSignUp;
+  pendingSignUp = null;
   db.users.push(user);
   db.passwords[user.email] = password;
   startSession(user);
@@ -157,13 +177,15 @@ export async function signUp({ name, email, password }) {
 
 export async function signIn({ email, password }) {
   const user = db.users.find((u) => u.email === email.toLowerCase());
-  if (!user || db.passwords?.[user.email] !== password) throw new ApiError(401, 'Invalid email or password');
+  if (!user || db.passwords?.[user.email] !== password) throw new ApiError(401, 'Password or email is incorrect');
   startSession(user);
+  return {};
 }
 
 export async function signInWithGoogle() {
   throw new ApiError(0, 'Google sign-in is not available in tests');
 }
+export const finishGoogleSignIn = async () => {};
 
 export async function welcome({ name, accountType, referralCode }) {
   const user = db.users.find((u) => u.id === currentUser().id);
@@ -176,34 +198,22 @@ export async function welcome({ name, accountType, referralCode }) {
   return currentUser();
 }
 
-export async function sendPhoneCode(phone) {
-  if (!/^[79]\d{8}$/.test(normalizePhone(phone))) throw new ApiError(400, 'Enter a valid Zambian mobile number');
-  return { ok: true };
-}
-export const testCode = async () => ({ code: FAKE_CODE });
-
-export async function verifyPhone({ phone, code, link }) {
-  if (code !== FAKE_CODE) throw new ApiError(400, 'That code is not correct');
-  const number = `0${normalizePhone(phone)}`;
-  if (link) {
-    db.users.find((u) => u.id === currentUser().id).phone = number;
-    return;
-  }
-  const user = db.users.find((u) => u.phone && normalizePhone(u.phone) === normalizePhone(phone));
-  if (!user) throw new ApiError(400, 'No account has this phone number yet. Sign in with email, then add it.');
-  startSession(user);
-}
-
 export async function changePassword({ currentPassword, newPassword }) {
   const user = currentUser();
   if (db.passwords?.[user.email] !== currentPassword) throw new ApiError(400, 'Invalid password');
   db.passwords[user.email] = newPassword;
 }
-export const requestPasswordReset = async () => ({ success: true });
-export async function resetPassword({ email, otp, password }) {
-  if (otp !== FAKE_CODE) throw new ApiError(400, 'Invalid OTP');
-  db.passwords ??= {};
-  db.passwords[email.toLowerCase()] = password;
+let resetFor = null;
+export async function requestPasswordReset(email) {
+  resetFor = email.toLowerCase();
+  return {};
+}
+export async function resetPassword({ otp, password }) {
+  if (otp !== FAKE_CODE) throw new ApiError(400, 'That code is not correct');
+  const user = db.users.find((u) => u.email === resetFor);
+  if (!user) throw new ApiError(400, 'No account has this email address');
+  (db.passwords ??= {})[user.email] = password;
+  startSession(user);
 }
 
 export const me = async () => currentUser();
@@ -1535,19 +1545,19 @@ Object.assign(admin, {
     return copy(
       db.users
         .filter((u) => u.admin || u.staff)
-        .map((u) => ({ id: u.id, name: u.name, phone: u.phone, role: u.admin ? 'owner' : 'staff', since: null })),
+        .map((u) => ({ id: u.id, name: u.name, email: u.email ?? null, phone: u.phone, role: u.admin ? 'owner' : 'staff', since: null })),
     );
   },
-  async addStaff({ phone, name }) {
+  async addStaff({ email, name }) {
     owner();
-    let user = db.users.find((u) => normalizePhone(u.phone) === normalizePhone(phone));
+    let user = db.users.find((u) => u.email === email.toLowerCase());
     if (user && db.shops.some((x) => x.ownerId === user.id)) throw new ApiError(409, `${user.name} owns a shop`);
     if (!user) {
-      user = { id: `usr_${db.users.length + 1}`, name: name || 'Zed Market staff', phone, accountType: 'admin' };
+      user = { id: `usr_${db.users.length + 1}`, name: name || 'Zed Market staff', email: email.toLowerCase(), phone: null, accountType: 'admin' };
       db.users.push(user);
     }
     user.staff = true;
-    return copy({ id: user.id, name: user.name, phone, role: 'staff' });
+    return copy({ id: user.id, name: user.name, email: user.email, role: 'staff' });
   },
   async removeStaff(id) {
     owner();

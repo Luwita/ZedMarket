@@ -45,8 +45,7 @@ async function api(method, url, body, token) {
   return out;
 }
 
-// Signs in through the SMS code flow, reading the code from the fake SMS sender.
-// Signs in through the stand-in for Neon Auth (see testing/auth.js).
+// Signs in through the stand-in for Clerk (see testing/auth.js).
 async function signIn(phone, extra = {}) {
   return testSignIn(api, phone, extra);
 }

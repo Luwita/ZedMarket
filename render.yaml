@@ -22,29 +22,13 @@ services:
       # Neon's direct connection string (no -pooler), used to apply database updates when the server starts.
       - key: DATABASE_URL_UNPOOLED
         sync: false
-      # Neon Auth: the production branch's NEON_AUTH_BASE_URL (neon env pull --branch production).
-      - key: NEON_AUTH_BASE_URL
+      # Clerk (https://dashboard.clerk.com > API keys). The secret key stays on the server; the publishable key is
+      # built into the website, so it must be set before the build runs.
+      - key: CLERK_SECRET_KEY
         sync: false
-      # Signs the sign-in session cookie; Render makes a random one.
-      - key: NEON_AUTH_COOKIE_SECRET
-        generateValue: true
-      # Owners: phone numbers they verify on their account, and/or email addresses, comma-separated.
-      - key: ADMIN_PHONES
+      - key: REACT_APP_CLERK_PUBLISHABLE_KEY
         sync: false
+      # Owners: the email addresses they sign in with, comma-separated (verified by Clerk).
       # The value is kept in Render (Environment), not here, because this repository is public.
       - key: ADMIN_EMAILS
-        sync: false
-      # Test mode is on while no SMS provider is paid for: phone codes are shown on screen (never staff or
-      # owner codes; those are only in the server log). "0" sends codes only by SMS. Set explicitly, because
-      # removing a key here doesn't remove it on Render.
-      - key: SHOW_SIGNIN_CODES
-        value: "0"
-      # Email (Resend): password-reset and other emailed codes. EMAIL_FROM must be on a domain verified in Resend.
-      - key: RESEND_API_KEY
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
-      - key: AT_USERNAME
-        sync: false
-      - key: AT_API_KEY
         sync: false

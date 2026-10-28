@@ -136,9 +136,9 @@ export default function Checkout() {
         <div className="card empty">
           <div className="empty-icon">🔐</div>
           <h2>Sign in to check out</h2>
-          <p className="muted">We'll text you a code. It takes a few seconds, and lets you track your order.</p>
+          <p className="muted">Sign in or create an account in a few seconds. It lets you track your order.</p>
           <Link to="/login?next=/checkout" className="btn btn-primary">
-            Sign in with your phone
+            Sign in or create an account
           </Link>
         </div>
       </div>

@@ -115,10 +115,10 @@ export default function Sell() {
             <div className="empty">
               <h2>Open your shop</h2>
               <p className="muted">
-                First sign in with your phone number. Your shop is linked to it, so you can manage it from any device.
+                First sign in or create an account. Your shop is linked to it, so you can manage it from any device.
               </p>
               <Link to={`/login?next=${encodeURIComponent('/sell#register')}`} className="btn btn-primary btn-lg">
-                Continue with my phone number
+                Sign in to open my shop
               </Link>
             </div>
           ) : user.shopId ? (

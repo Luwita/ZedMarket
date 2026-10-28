@@ -23,10 +23,10 @@ const search = z.object({
 const like = (q) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 // Zed Market staff tools. Every change is written to the activity log with the staff member and the reason.
-// `deleteIdentity(authId)` deletes a Neon Auth sign-in when an owner deletes someone's account.
+// `deleteIdentity(authId)` deletes a Clerk sign-in when an owner deletes someone's account.
 export function adminRoutes(
   db,
-  { adminPhones = [], adminEmails = [], sms = null, exposeCodes = false, authReady = true, deleteIdentity = async () => {} } = {},
+  { adminPhones = [], adminEmails = [], authReady = true, deleteIdentity = async () => {} } = {},
 ) {
   const owners = new Set(adminPhones.map(normalizePhone).filter(Boolean));
   const ownerEmails = new Set(adminEmails.map((e) => e.trim().toLowerCase()).filter(Boolean));
@@ -59,17 +59,8 @@ export function adminRoutes(
       (SELECT count(*) FROM shops WHERE momo_number IS NULL AND owner_id IS NOT NULL)::int AS shops_without_momo`);
     res.json({
       setup: {
-        sms:
-          !sms?.provider || sms.provider === 'console'
-            ? 'off'
-            : /sandbox/.test(sms.provider)
-              ? 'sandbox'
-              : /gateway/.test(sms.provider)
-                ? 'phone'
-                : 'live',
         couriersUnconfirmed: couriers.filter((c) => !c.confirmed && !c.disabled).map((c) => c.name),
         pointsConfirmed: !!delivery.points,
-        signInCodesShown: exposeCodes,
         signInReady: authReady,
         commissionSet: setup.commission_set,
         commissionAccountSet: setup.commission_account_set,
@@ -364,7 +355,7 @@ export function adminRoutes(
     if (req.params.id === req.user.id) throw new HttpError(400, "You can't suspend your own account");
     if (body.suspended && !body.reason) throw new HttpError(400, 'Give a reason for suspending this account');
     const [target] = await db.query('SELECT phone, email, is_staff FROM users WHERE id = $1', [req.params.id]);
-    if (target && isOwner(target)) throw new HttpError(403, 'Owners can only be changed in ADMIN_PHONES or ADMIN_EMAILS on the server');
+    if (target && isOwner(target)) throw new HttpError(403, 'Owners can only be changed in ADMIN_EMAILS on the server');
     if (target?.is_staff && req.user.staffRole !== 'owner') throw new HttpError(403, 'Only owners can suspend staff');
     await db.tx(async (t) => {
       const rows = await t.query(
@@ -397,7 +388,7 @@ export function adminRoutes(
       ]);
       if (!target) throw new HttpError(404, 'User not found');
       if (isOwner(target) || target.is_staff) {
-        throw new HttpError(403, 'Staff and owner accounts are removed under Staff, or in ADMIN_PHONES on the server');
+        throw new HttpError(403, 'Staff and owner accounts are removed under Staff, or in ADMIN_EMAILS on the server');
       }
       const [shop] = await t.query('SELECT name FROM shops WHERE owner_id = $1 AND deleted_at IS NULL', [target.id]);
       if (shop) throw new HttpError(409, `This person owns ${shop.name}. Delete the shop under Shops first.`);

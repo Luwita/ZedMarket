@@ -183,7 +183,7 @@ export async function eraseUser(t, id) {
   await t.query('DELETE FROM conversations WHERE buyer_id = $1', [id]);
   await t.query(`UPDATE price_requests SET note = '' WHERE buyer_id = $1`, [id]);
   // The row keeps its auth_id so a still-valid sign-in token can't recreate the account; the caller deletes the
-  // Neon Auth sign-in itself, so the same email can sign up again as a new, unrelated account.
+  // Clerk sign-in itself, so the same email can sign up again as a new, unrelated account.
   await t.query(`UPDATE users SET name = 'Deleted user', phone = NULL, email = NULL, deleted_at = now() WHERE id = $1`, [id]);
 }
 

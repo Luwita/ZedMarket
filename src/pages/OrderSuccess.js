@@ -36,7 +36,7 @@ export default function OrderSuccess() {
           <strong>
             {order.shipping.address}, {formatLocation(order.shipping)}
           </strong>
-          . We'll SMS updates to <strong>{order.buyer.phone}</strong>.
+          . Updates on your order appear in <Link to="/notifications">Notifications</Link>.
         </p>
 
         {order.shipments.map((s) => (

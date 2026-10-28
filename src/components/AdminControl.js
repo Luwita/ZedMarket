@@ -109,31 +109,31 @@ export function ParcelControls({ orderId, shipment, payByMomo = false, run }) {
 export function Staff() {
   const { user } = useStore();
   const { items, run } = useAdminList(() => api.admin.staff(), {});
-  const [form, setForm] = useState({ phone: '', name: '' });
+  const [form, setForm] = useState({ email: '', name: '' });
   const isOwner = user?.staffRole === 'owner';
   return (
     <>
       <p className="muted small">
         Staff run Zed Market from this panel. Staff accounts can't own a shop, so a shop owner who joins the team needs a
-        separate phone number. Owners are set with ADMIN_PHONES on the server and are the only ones who can add or
-        remove staff and change settings.
+        separate email address. Staff sign in with the address you add here. Owners are set with ADMIN_EMAILS on the
+        server and are the only ones who can add or remove staff and change settings.
       </p>
       {isOwner && (
         <form
           className="card form-card admin-filters"
           onSubmit={async (e) => {
             e.preventDefault();
-            if (await run(() => api.admin.addStaff(form), `${form.name || form.phone} added to the team`)) {
-              setForm({ phone: '', name: '' });
+            if (await run(() => api.admin.addStaff(form), `${form.name || form.email} added to the team`)) {
+              setForm({ email: '', name: '' });
             }
           }}
         >
           <input
-            type="tel"
-            value={form.phone}
-            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            placeholder="Phone, e.g. 097 123 4567"
-            aria-label="Staff phone"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            placeholder="Email they sign in with"
+            aria-label="Staff email"
           />
           <input
             value={form.name}
@@ -146,9 +146,9 @@ export function Staff() {
       )}
       <ul className="admin-log">
         {items?.map((s) => (
-          <li key={s.phone} className="banner-row">
+          <li key={s.id ?? s.email ?? s.phone} className="banner-row">
             <span className="grow">
-              <strong>{s.name}</strong> · {s.phone}
+              <strong>{s.name}</strong> · {s.email ?? s.phone}
               <span className="block small muted">
                 {s.role === 'owner' ? 'Owner' : 'Staff'}
                 {s.since && ` · since ${date(s.since)}`}

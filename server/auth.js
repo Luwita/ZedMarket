@@ -1,17 +1,15 @@
 import { randomBytes } from 'node:crypto';
-import express, { Router } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { normalizePhone } from '../src/utils/format.js';
 import { HttpError, newId, parse } from './http.js';
 import { toUser } from './mappers.js';
 import { getSettings } from './settings.js';
-import { consoleSms } from './sms.js';
-import { consoleEmail } from './email.js';
 import { notify } from './notify.js';
 
-// Accounts are run by Neon Auth (see neonAuth.js): people sign up with email or Google, then link and verify a
-// phone number by SMS code. Every API request carries a Neon Auth token; this file turns it into a ZedMarket
-// user (the users table), creating that user the first time and copying in the verified phone number.
+// Accounts are run by Clerk (see clerkAuth.js): people sign up with email or Google. Every API request carries a
+// Clerk session token; this file turns it into a ZedMarket user (the users table), creating that user the first
+// time they use the API.
 
 // A short, shareable invite code such as CHANDA42K.
 async function uniqueReferralCode(db, name) {
@@ -27,9 +25,8 @@ async function uniqueReferralCode(db, name) {
 const phoneSet = (phones = []) => new Set(phones.map(normalizePhone).filter(Boolean));
 const emailSet = (emails = []) => new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean));
 
-// Owners are the ADMIN_PHONES numbers (once verified on the account) and the ADMIN_EMAILS addresses (once
-// verified; on a development computer also unverified, as there is nobody to send the code). They are checked on
-// every request, so removing one revokes access at once. Other staff are added in the admin panel.
+// Owners are the ADMIN_EMAILS addresses (once Clerk has verified them; on a development computer also unverified).
+// They are checked on every request, so removing one revokes access at once. Other staff are added in the admin panel.
 // Suspended or deleted accounts load as nobody, so they stop working everywhere at once.
 function makeLoadUser(owners) {
   return async (db, userId) => {
@@ -50,33 +47,8 @@ function makeLoadUser(owners) {
   };
 }
 
-// The verified phone number of a Neon Auth user, read from the neon_auth schema that Neon Auth keeps in this same
-// database. Returns the 9-digit form (977123456) or null.
-export const neonPhoneLookup = (db) => async (authId) => {
-  try {
-    const [row] = await db.query('SELECT "phoneNumber", "phoneNumberVerified" FROM neon_auth."user" WHERE id = $1', [authId]);
-    return row?.phoneNumberVerified && row.phoneNumber ? normalizePhone(row.phoneNumber) : null;
-  } catch {
-    return null; // no neon_auth schema (e.g. a database without Neon Auth)
-  }
-};
-
-// Deletes a Neon Auth sign-in (its sessions, linked logins and the user) from the neon_auth schema Neon Auth
-// keeps in this database. Used when someone deletes their ZedMarket account.
-export const neonDeleteIdentity = (db) => async (authId) => {
-  try {
-    await db.tx(async (t) => {
-      await t.query('DELETE FROM neon_auth.session WHERE "userId" = $1', [authId]);
-      await t.query('DELETE FROM neon_auth.account WHERE "userId" = $1', [authId]);
-      await t.query('DELETE FROM neon_auth."user" WHERE id = $1', [authId]);
-    });
-  } catch (err) {
-    console.error(`[auth] could not delete the Neon Auth user ${authId}: ${err.message}`);
-  }
-};
-
-// Gives a user the phone number they verified. If staff already set up an account for that number (e.g. a new
-// staff member added by phone) and this account is still empty, the person takes over that account instead.
+// Gives a user a phone number verified outside Clerk (`lookupPhone` only returns one in tests). If staff already set
+// up an account for that number and this account is still empty, the person takes over that account instead.
 // Returns the id of the account the person now uses.
 async function attachPhone(db, user, phone) {
   if (!phone || user.phone === phone) return user.id;
@@ -107,10 +79,19 @@ async function attachPhone(db, user, phone) {
   });
 }
 
-// The ZedMarket user for a verified Neon Auth identity, created the first time they use the API.
+// The ZedMarket user for a verified Clerk identity, created the first time they use the API. A staff member added
+// by email (before they had an account) takes over that account when they sign in with the verified address.
 async function userFor(db, identity, lookupPhone) {
   let [row] = await db.query('SELECT * FROM users WHERE auth_id = $1', [identity.id]);
   if (row?.deleted_at) return row; // a deleted account stays deleted
+  if (!row && identity.email && identity.emailVerified) {
+    [row] = await db.query(
+      `UPDATE users SET auth_id = $1, email_verified = true
+        WHERE id = (SELECT id FROM users WHERE lower(email) = lower($2) AND auth_id IS NULL AND is_staff AND deleted_at IS NULL LIMIT 1)
+        RETURNING *`,
+      [identity.id, identity.email],
+    );
+  }
   if (!row) {
     const phone = await lookupPhone(identity.id);
     const name = identity.name || identity.email?.split('@')[0] || 'Zed Market Shopper';
@@ -132,9 +113,12 @@ async function userFor(db, identity, lookupPhone) {
   return row;
 }
 
-// Adds req.user (and req.identity, the Neon Auth account) when a valid Neon Auth token is sent.
-// `verifyToken(token)` returns { id, email, emailVerified, name } or null; `lookupPhone(authId)` the verified phone.
-export const authenticate = (db, { adminPhones = [], adminEmails = [], production = false, verifyToken, lookupPhone }) => {
+// Adds req.user (and req.identity, the Clerk account) when a valid Clerk session token is sent.
+// `verifyToken(token)` returns { id, email, emailVerified, name } or null.
+export const authenticate = (
+  db,
+  { adminPhones = [], adminEmails = [], production = false, verifyToken, lookupPhone = async () => null },
+) => {
   const loadUser = makeLoadUser({ phones: phoneSet(adminPhones), emails: emailSet(adminEmails), production });
   return async (req, _res, next) => {
     try {
@@ -175,7 +159,7 @@ export const requireAdmin = (req, res, next) =>
     next();
   });
 
-// Owners (ADMIN_PHONES / ADMIN_EMAILS) manage the staff list and platform settings.
+// Owners (ADMIN_EMAILS) manage the staff list and platform settings.
 export const requireOwner = (req, res, next) =>
   requireUser(req, res, () => {
     if (req.user.staffRole !== 'owner') throw new HttpError(403, 'Only Zed Market owners can do this');
@@ -183,9 +167,8 @@ export const requireOwner = (req, res, next) =>
   });
 
 // /api/session: the signed-in person's ZedMarket account.
-export function sessionRoutes(db, { exposeCodes = false, adminPhones = [], adminEmails = [] } = {}) {
+export function sessionRoutes(db) {
   const router = Router();
-  const owners = { phones: phoneSet(adminPhones), emails: emailSet(adminEmails) };
 
   router.get('/me', requireUser, (req, res) => res.json(req.user));
 
@@ -238,91 +221,5 @@ export function sessionRoutes(db, { exposeCodes = false, adminPhones = [], admin
     res.json({ ...req.user, name: updated.name, accountType: updated.account_type });
   });
 
-  // Test mode only: the code last sent to a phone number or email address, so testers can sign in without SMS.
-  // Staff and owner codes are never shown; they are in the server log.
-  router.get('/test-code', async (req, res) => {
-    if (!exposeCodes) throw new HttpError(404, 'Not found');
-    const { to } = parse(z.object({ to: z.string().trim().min(3).max(120) }), req.query);
-    const key = to.includes('@') ? to.toLowerCase() : normalizePhone(to);
-    if (await isStaffContact(db, owners, key)) return res.json({ code: null });
-    const [row] = await db.query(
-      `SELECT code FROM test_codes WHERE sent_to = $1 AND created_at > now() - interval '10 minutes'`,
-      [key],
-    );
-    res.json({ code: row?.code ?? null });
-  });
-
-  return router;
-}
-
-// Whether a phone number (9 digits) or email address belongs to an owner or a staff member.
-async function isStaffContact(db, owners, key) {
-  if (owners.phones.has(key) || owners.emails.has(key)) return true;
-  const [staff] = await db.query(
-    'SELECT 1 FROM users WHERE is_staff AND deleted_at IS NULL AND (phone = $1 OR lower(email) = $1)',
-    [key],
-  );
-  return !!staff;
-}
-
-// /api/webhooks/neon-auth: Neon Auth asks ZedMarket to deliver sign-in codes. Phone codes go out by SMS.
-// `verifyWebhook(rawBody, headers)` checks Neon's signature; requests that fail it are refused.
-export function neonAuthWebhook(
-  db,
-  { sms = consoleSms, email = consoleEmail, exposeCodes = false, verifyWebhook, adminPhones = [], adminEmails = [] },
-) {
-  const router = Router();
-  const owners = { phones: phoneSet(adminPhones), emails: emailSet(adminEmails) };
-  router.post('/', express.raw({ type: () => true, limit: '100kb' }), async (req, res) => {
-    const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
-    if (!(await verifyWebhook(raw, req.headers))) throw new HttpError(401, 'Bad signature');
-    const event = JSON.parse(raw.toString('utf8'));
-    if (event.event_type !== 'send.otp') return res.json({ ok: true });
-
-    const data = event.event_data ?? {};
-    const code = String(data.otp_code ?? '');
-    const bySms = data.delivery_preference === 'sms';
-    const to = bySms ? normalizePhone(event.user?.phone_number ?? '') : (event.user?.email ?? '').toLowerCase();
-    if (!code || !to) throw new HttpError(400, 'Missing code or recipient');
-
-    if (exposeCodes) {
-      if (await isStaffContact(db, owners, to)) console.log(`[auth] staff sign-in code for ${bySms ? `0${to}` : to}: ${code}`);
-      else {
-        await db.query(
-          `INSERT INTO test_codes (sent_to, code) VALUES ($1, $2)
-           ON CONFLICT (sent_to) DO UPDATE SET code = EXCLUDED.code, created_at = now()`,
-          [to, code],
-        );
-      }
-    }
-    if (!bySms) {
-      // Emailed codes: password reset, email verification or email sign-in.
-      const reset = /forget|reset|password/i.test(String(data.type ?? data.otp_type ?? ''));
-      const subject = reset ? 'Your Zed Market password reset code' : 'Your Zed Market code';
-      const text = `${reset ? 'Your code to set a new password' : 'Your Zed Market code'} is ${code}. It expires in 5 minutes. If you didn't ask for it, ignore this email.`;
-      if (email.provider === 'console') {
-        console.warn(`[auth] an email code for ${to} was not sent: no email provider is set up (RESEND_API_KEY, EMAIL_FROM)`);
-        if (exposeCodes) return res.json({ ok: true });
-        throw new HttpError(503, 'Email codes are not available yet');
-      }
-      try {
-        await email.send(to, subject, text);
-      } catch (err) {
-        if (!exposeCodes) throw err;
-      }
-      return res.json({ ok: true });
-    }
-    if (sms.provider === 'console' && !exposeCodes) {
-      console.warn(`[auth] an SMS code for 0${to} was not sent: no SMS provider is set up (AT_USERNAME, AT_API_KEY)`);
-      throw new HttpError(503, 'SMS codes are not available yet');
-    }
-    try {
-      await sms.send(to, `Your Zed Market code is ${code}. It expires in 5 minutes.`);
-    } catch (err) {
-      console.error(`[sms] sign-in code not sent to 0${to}: ${err.message}`);
-      if (!exposeCodes) throw err; // Neon Auth then tells the person the code couldn't be sent
-    }
-    res.json({ ok: true });
-  });
   return router;
 }

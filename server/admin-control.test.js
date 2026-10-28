@@ -30,7 +30,7 @@ async function api(method, url, body, token) {
   return out;
 }
 
-// Signs in through the stand-in for Neon Auth (see testing/auth.js).
+// Signs in through the stand-in for Clerk (see testing/auth.js).
 async function signIn(phone, extra = {}) {
   return testSignIn(api, phone, extra);
 }
@@ -99,14 +99,14 @@ describe('staff accounts', () => {
   });
 
   test('owners add and remove staff; staff cannot manage staff or settings', async () => {
-    const added = await api('POST', '/api/admin/staff', { phone: '0955123456', name: 'Mapalo' }, owner.token);
+    const added = await api('POST', '/api/admin/staff', { email: '955123456@example.test', name: 'Mapalo' }, owner.token);
     assert.equal(added.status, 201);
     const staff = await signIn('0955123456');
     assert.equal(staff.user.isAdmin, true);
     assert.equal(staff.user.staffRole, 'staff');
 
     assert.equal((await api('GET', '/api/admin/stats', undefined, staff.token)).status, 200);
-    assert.equal((await api('POST', '/api/admin/staff', { phone: '0955999999' }, staff.token)).status, 403);
+    assert.equal((await api('POST', '/api/admin/staff', { email: 'other@example.test' }, staff.token)).status, 403);
     assert.equal((await api('PATCH', '/api/admin/settings', { commissionRate: 0.2 }, staff.token)).status, 403);
     assert.equal((await api('POST', '/api/shops', shopBody('0955123456', 'Side hustle'), staff.token)).status, 403);
     // Staff can't suspend the owner, and the owner can't be suspended at all.
@@ -125,7 +125,7 @@ describe('staff accounts', () => {
   });
 
   test('a shop owner cannot be made staff', async () => {
-    const res = await api('POST', '/api/admin/staff', { phone: '0977100100' }, owner.token);
+    const res = await api('POST', '/api/admin/staff', { email: '977100100@example.test' }, owner.token);
     assert.equal(res.status, 409);
     assert.match(res.body.error, /owns the shop Mutinta Appliances/);
   });
@@ -233,7 +233,7 @@ describe('deleting accounts', () => {
   });
 
   test('staff, shop owners, owners and yourself cannot be deleted this way', async () => {
-    await api('POST', '/api/admin/staff', { phone: '0955246810', name: 'Bwalya' }, owner.token);
+    await api('POST', '/api/admin/staff', { email: '955246810@example.test', name: 'Bwalya' }, owner.token);
     const staff = await signIn('0955246810');
     const someone = await signIn('0966135790', { name: 'Mwila' });
 

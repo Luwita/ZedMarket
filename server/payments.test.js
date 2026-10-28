@@ -3,13 +3,10 @@ import { after, before, describe, test } from 'node:test';
 import { createApp } from './app.js';
 import { testAuth, testSignIn } from './testing/auth.js';
 import { createDb, migrate } from './db.js';
-import { smsText } from './notify.js';
 
 let server;
 let base;
 let db;
-const sent = [];
-let smsDown = false;
 
 async function api(method, url, body, token) {
   const res = await fetch(base + url, {
@@ -20,7 +17,7 @@ async function api(method, url, body, token) {
   return { status: res.status, body: await res.json().catch(() => ({})) };
 }
 
-// Signs in through the stand-in for Neon Auth (see testing/auth.js).
+// Signs in through the stand-in for Clerk (see testing/auth.js).
 async function signIn(phone, extra = {}) {
   return testSignIn(api, phone, extra);
 }
@@ -52,7 +49,14 @@ const order = (payment, extra = {}) =>
     buyer.token,
   );
 const parcel = (id, path, body, token) => api('POST', `/api/orders/${id}/shipments/${seller.shopId}/${path}`, body, token);
-const textsTo = (phone) => sent.filter((m) => m.phone === phone).map((m) => m.message);
+// What the person was told in the app (their notifications), oldest first, as "title. body".
+const textsTo = async (phone) =>
+  (
+    await db.query(
+      `SELECT n.title, n.body FROM notifications n JOIN users u ON u.id = n.user_id WHERE u.phone = $1 ORDER BY n.created_at, n.id`,
+      [phone],
+    )
+  ).map((n) => [n.title, n.body].filter(Boolean).join('. '));
 
 before(async () => {
   db = await createDb({ url: '', dataDir: '' });
@@ -60,13 +64,6 @@ before(async () => {
   server = createApp(db, { auth: testAuth,
     uploadDir: '.',
     adminPhones: ['0955000001'],
-    sms: {
-      provider: "Africa's Talking",
-      async send(phone, message) {
-        if (smsDown) throw new Error('provider unreachable');
-        sent.push({ phone, message });
-      },
-    },
   }).listen(0);
   base = `http://localhost:${server.address().port}`;
 
@@ -114,7 +111,6 @@ describe('Mobile Money paid straight to the shop', () => {
   });
 
   test('the buyer gets the number, says they paid, and the shop confirms before it can send', async () => {
-    sent.length = 0;
     const placed = await order('momo');
     assert.equal(placed.status, 201, JSON.stringify(placed.body));
     const o = placed.body;
@@ -129,10 +125,9 @@ describe('Mobile Money paid straight to the shop', () => {
       name: 'Mutinta Hamoonga',
     });
 
-    // Both sides are told by text message as well as in the app.
-    assert.match(textsTo('966200200')[0], /^Zed Market: Pay K500 to Airtel Money 0977555123\. Name: Mutinta Hamoonga\./);
-    assert.match(textsTo('977100100')[0], /New order ZM-\w+\..*Wait for K500 on your Mobile Money/);
-    assert.ok(sent.every((m) => m.message.length <= 160 && /^[\x20-\x7E]+$/.test(m.message)), 'one plain SMS each');
+    // Both sides are told in the app.
+    assert.match((await textsTo('966200200')).at(-1), /^Pay K500 to Airtel Money 0977555123\. Name: Mutinta Hamoonga\./);
+    assert.match((await textsTo('977100100')).at(-1), /New order ZM-\w+\..*Wait for K500 on your Mobile Money/);
 
     // The parcel can't be sent before the money is confirmed.
     const url = `/api/orders/${o.id}/shipments/${seller.shopId}`;
@@ -148,17 +143,17 @@ describe('Mobile Money paid straight to the shop', () => {
     assert.equal(claimed.status, 200, JSON.stringify(claimed.body));
     assert.equal(claimed.body.shipments[0].paymentRef, 'MP261013.1530.A12345');
     assert.equal(claimed.body.shipments[0].paid, false, 'saying you paid does not mark the parcel paid');
-    assert.match(textsTo('977100100').at(-1), /Payment sent for order .*Chipo Zulu says they sent K500.*MP261013/);
+    assert.match((await textsTo('977100100')).at(-1), /Payment sent for order .*Chipo Zulu says they sent K500.*MP261013/);
 
     const confirmed = await parcel(o.id, 'paid', {}, seller.token);
     assert.equal(confirmed.status, 200, JSON.stringify(confirmed.body));
     assert.equal(confirmed.body.shipments[0].paid, true);
     assert.equal(confirmed.body.paid, true);
-    assert.match(textsTo('966200200').at(-1), /Mutinta Appliances received your payment/);
+    assert.match((await textsTo('966200200')).at(-1), /Mutinta Appliances received your payment/);
     assert.equal((await parcel(o.id, 'paid', {}, seller.token)).status, 409, 'confirmed once');
 
     assert.equal((await api('PATCH', url, { status: 'dispatched' }, seller.token)).status, 200);
-    assert.match(textsTo('966200200').at(-1), /Ready to collect at Mutinta Appliances/);
+    assert.match((await textsTo('966200200')).at(-1), /Ready to collect at Mutinta Appliances/);
     assert.equal((await api('PATCH', url, { status: 'delivered' }, seller.token)).status, 200);
 
     // The shop already has the money, so it owes Zed Market the 5% commission.
@@ -174,10 +169,9 @@ describe('Mobile Money paid straight to the shop', () => {
 
     const paid = (await order('momo')).body;
     await parcel(paid.id, 'paid', {}, seller.token);
-    sent.length = 0;
     const second = await parcel(paid.id, 'cancel', { reason: 'Out of stock' }, seller.token);
     assert.equal(second.body.refund, 500);
-    assert.match(textsTo('977100100')[0], /Send K500 back for order/);
+    assert.match((await textsTo('977100100')).at(-1), /Send K500 back for order/);
     const [refund] = (await api('GET', '/api/admin/refunds?status=due', undefined, admin.token)).body;
     assert.equal(refund.amount, 500);
     assert.equal(refund.heldByShop, true);
@@ -202,40 +196,9 @@ describe('Mobile Money paid straight to the shop', () => {
 
     const { setup } = (await api('GET', '/api/admin/stats', undefined, admin.token)).body;
     assert.equal(setup.shopsWithoutMomo, 1);
-    assert.equal(setup.sms, 'live');
     assert.equal(setup.commissionSet, false);
     assert.equal(setup.pointsConfirmed, false);
     assert.ok(setup.couriersUnconfirmed.includes('Platinum Couriers'));
-  });
-});
-
-describe('text messages for notifications', () => {
-  test('texts are plain, start with the sender and fit one SMS', () => {
-    assert.equal(smsText('🎉 Your shop is approved and live', 'Buyers can now find you.'), 'Zed Market: Your shop is approved and live. Buyers can now find you.');
-    assert.equal(smsText('On its way', 'Yango · tracking 123 – “fast”'), 'Zed Market: On its way. Yango - tracking 123 - "fast"');
-    assert.equal(smsText('You earned K50!', 'Thanks'), 'Zed Market: You earned K50! Thanks');
-    const long = smsText('Order', 'x'.repeat(300));
-    assert.equal(long.length, 160);
-    assert.ok(long.endsWith('...'));
-  });
-
-  test('announcements and vouchers stay in the app; a failed text never breaks the request', async () => {
-    sent.length = 0;
-    const res = await api(
-      'POST',
-      '/api/admin/announcements',
-      { title: 'Independence Day deals', body: 'Up to 30% off', audience: 'all', confirm: true },
-      admin.token,
-    );
-    assert.ok(res.status < 300, JSON.stringify(res.body));
-    assert.equal(sent.length, 0);
-
-    smsDown = true;
-    try {
-      assert.equal((await order('cod')).status, 201, 'the order is placed even when the text cannot be sent');
-    } finally {
-      smsDown = false;
-    }
   });
 });
 
@@ -267,9 +230,8 @@ describe('commission owed by shops', () => {
   });
 
   test('staff remind the shop, record what it pays, and never more than it owes', async () => {
-    sent.length = 0;
     assert.equal((await remind()).status, 200);
-    assert.match(textsTo('977100100')[0], /Please pay K25 commission\. Send it to MTN MoMo 0966000111 \(Zed Market Ltd\)/);
+    assert.match((await textsTo('977100100')).at(-1), /Please pay K25 commission\. Send it to MTN MoMo 0966000111 \(Zed Market Ltd\)/);
 
     const tooMuch = await receive(30);
     assert.equal(tooMuch.status, 409);
@@ -282,7 +244,7 @@ describe('commission owed by shops', () => {
     assert.equal(b.owed, 15);
     assert.equal(b.commissionPaid, 10);
     assert.equal(b.paidOut, 0, 'commission received is not a payout to the shop');
-    assert.match(textsTo('977100100').at(-1), /received your K10 commission.*You still owe K15/);
+    assert.match((await textsTo('977100100')).at(-1), /received your K10 commission.*You still owe K15/);
 
     assert.equal((await receive(15)).status, 201);
     b = await balance();
@@ -379,10 +341,9 @@ describe('unpaid Mobile Money orders', () => {
     const o = await place();
     assert.deepEqual(await checkUnpaidOrders(db), { buyersReminded: 0, shopsReminded: 0, cancelled: 0 }, 'too early');
 
-    sent.length = 0;
     await ago(o.id, 13);
     assert.equal((await checkUnpaidOrders(db)).buyersReminded, 1);
-    assert.match(textsTo('966200200')[0], /Reminder: pay K300 to Airtel Money 0977555123. Order .*: pay by .* or it will be cancelled/);
+    assert.match((await textsTo('966200200')).at(-1), /Reminder: pay K300 to Airtel Money 0977555123. Order .*: pay by .* or it will be cancelled/);
     assert.equal((await checkUnpaidOrders(db)).buyersReminded, 0, 'reminded once');
 
     await ago(o.id, 25);
@@ -391,7 +352,7 @@ describe('unpaid Mobile Money orders', () => {
     assert.equal(mine.shipments[0].status, 'cancelled');
     assert.equal(mine.shipments[0].cancelReason, 'Not paid within 24 hours');
     assert.equal((await api('GET', `/api/products/${fan}`)).body.stock, 10, 'stock is back on sale');
-    assert.match(textsTo('977100100').at(-1), /Order .* was cancelled.*didn't pay within 24 hours/);
+    assert.match((await textsTo('977100100')).at(-1), /Order .* was cancelled.*didn't pay within 24 hours/);
   });
 
   test('a payment the buyer says they sent is never cancelled; the shop is reminded instead', async () => {
@@ -403,7 +364,7 @@ describe('unpaid Mobile Money orders', () => {
     const done = await checkUnpaidOrders(db);
     assert.equal(done.cancelled, 0);
     assert.equal(done.shopsReminded, 1);
-    assert.match(textsTo('977100100').at(-1), /Please check the payment for order .*MP99/);
+    assert.match((await textsTo('977100100')).at(-1), /Please check the payment for order .*MP99/);
   });
 
   test('owners change the time limit', async () => {
@@ -421,7 +382,7 @@ describe('unpaid Mobile Money orders', () => {
     const ok = await confirm('Shop confirmed by phone');
     assert.equal(ok.status, 200, JSON.stringify(ok.body));
     assert.equal(ok.body.shipments[0].paid, true);
-    assert.match(textsTo('977100100').at(-1), /Zed Market confirmed the payment/);
+    assert.match((await textsTo('977100100')).at(-1), /Zed Market confirmed the payment/);
     assert.equal((await confirm('Again')).status, 409);
     const sentNow = await api(
       'PATCH',
