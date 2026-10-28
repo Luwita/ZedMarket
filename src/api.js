@@ -60,7 +60,15 @@ async function request(method, path, body) {
 // Clerk reports problems as { errors: [{ message, longMessage }] }. Either way the person sees a readable message.
 async function clerkCall(call, fallback) {
   try {
-    return await call(await loadClerk());
+    const clerk = await loadClerk();
+    try {
+      return await call(clerk);
+    } catch (err) {
+      // "You're already signed in": an old session is still open. Close it and try once more.
+      if (err?.errors?.[0]?.code !== 'session_exists') throw err;
+      await clerk.signOut();
+      return await call(clerk);
+    }
   } catch (err) {
     const first = err?.errors?.[0];
     throw new ApiError(err?.status ?? 400, first?.longMessage || first?.message || err?.message || fallback);
@@ -71,8 +79,10 @@ async function clerkCall(call, fallback) {
 let waiting = null;
 
 // Clerk refuses to start a sign-in while an old session is still open in this browser, so close it first.
+// Includes sessions Clerk keeps in a pending state, which `clerk.session` does not report.
 async function clearOldSession(clerk) {
-  if (clerk.session) await clerk.signOut();
+  if (clerk.session || clerk.client?.sessions?.length) await clerk.signOut();
+  rememberSignedIn(false);
 }
 
 async function finish(clerk, attempt) {
