@@ -30,13 +30,17 @@ export function clerkTokenVerifier({ secretKey, clerk = createClerkClient({ secr
 
   return async (token) => {
     try {
-      const { data, errors } = await verify(token, { secretKey });
-      if (errors || !data?.sub) {
+      // The installed @clerk/backend returns the token's claims directly and throws when the token is bad; older
+      // releases return { data, errors }. Both are handled.
+      const result = await verify(token, { secretKey });
+      const errors = result?.errors;
+      const claims = result?.data ?? result;
+      if (errors || !claims?.sub) {
         // Why a token was refused (never the token itself), e.g. a secret key from a different Clerk app.
         console.error(`[auth] Clerk token refused: ${errors?.[0]?.reason ?? 'no user in it'}: ${errors?.[0]?.message ?? ''}`);
         return null;
       }
-      return await identityOf(data.sub);
+      return await identityOf(claims.sub);
     } catch (err) {
       console.error(`[auth] could not check a Clerk token: ${err.message}`);
       return null;

@@ -34,6 +34,19 @@ test('a valid Clerk token becomes the person, from their primary email address',
   assert.deepEqual(calls, ['user_1'], 'the person is looked up once, then remembered for a minute');
 });
 
+test('the claims returned directly (as @clerk/backend 2.x does) are understood too', async () => {
+  const check = clerkTokenVerifier({
+    secretKey: 'sk_test',
+    clerk: fakeClerk([]),
+    verify: async (token) => {
+      if (token !== 'good') throw new Error('Invalid JWT');
+      return { sub: 'user_9', iat: 1, exp: 2 };
+    },
+  });
+  assert.equal((await check('good')).id, 'user_9');
+  assert.equal(await check('forged'), null);
+});
+
 test('a token that cannot be checked is refused instead of crashing the request', async () => {
   const check = clerkTokenVerifier({ secretKey: 'sk_test', clerk: fakeClerk([]), verify: async () => { throw new Error('offline'); } });
   assert.equal(await check('anything'), null);
