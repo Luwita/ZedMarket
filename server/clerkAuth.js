@@ -31,7 +31,11 @@ export function clerkTokenVerifier({ secretKey, clerk = createClerkClient({ secr
   return async (token) => {
     try {
       const { data, errors } = await verify(token, { secretKey });
-      if (errors || !data?.sub) return null;
+      if (errors || !data?.sub) {
+        // Why a token was refused (never the token itself), e.g. a secret key from a different Clerk app.
+        console.error(`[auth] Clerk token refused: ${errors?.[0]?.reason ?? 'no user in it'}: ${errors?.[0]?.message ?? ''}`);
+        return null;
+      }
       return await identityOf(data.sub);
     } catch (err) {
       console.error(`[auth] could not check a Clerk token: ${err.message}`);
