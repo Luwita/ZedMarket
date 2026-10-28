@@ -70,6 +70,11 @@ async function clerkCall(call, fallback) {
 // Which email-code step is waiting: 'signUp' (confirm a new address) or 'signIn' (a new device is checked).
 let waiting = null;
 
+// Clerk refuses to start a sign-in while an old session is still open in this browser, so close it first.
+async function clearOldSession(clerk) {
+  if (clerk.session) await clerk.signOut();
+}
+
 async function finish(clerk, attempt) {
   if (attempt.status !== 'complete') throw new Error("We couldn't finish signing you in. Please try again.");
   await clerk.setActive({ session: attempt.createdSessionId });
@@ -98,6 +103,7 @@ export async function restoreSession() {
 export async function signUp({ name, email, password }) {
   const [firstName, ...rest] = name.trim().split(/\s+/);
   return clerkCall(async (clerk) => {
+    await clearOldSession(clerk);
     const attempt = await clerk.client.signUp.create({
       emailAddress: email,
       password,
@@ -117,6 +123,7 @@ export async function signUp({ name, email, password }) {
 // Signs in with email and password. On a device Clerk doesn't know yet it first emails a code (`needsCode`).
 export async function signIn({ email, password }) {
   return clerkCall(async (clerk) => {
+    await clearOldSession(clerk);
     const attempt = await clerk.client.signIn.create({ identifier: email, password });
     if (attempt.status === 'complete') {
       await finish(clerk, attempt);
@@ -147,12 +154,14 @@ export async function verifyCode(code) {
 // Leaves the page for Google; Google sends the person back to /sso-callback, which signs them in and lands on `returnTo`.
 export const signInWithGoogle = (returnTo = '/login') =>
   clerkCall(
-    (clerk) =>
-      clerk.client.signIn.authenticateWithRedirect({
+    async (clerk) => {
+      await clearOldSession(clerk);
+      return clerk.client.signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: `${window.location.origin}/sso-callback`,
         redirectUrlComplete: `${window.location.origin}${returnTo}`,
-      }),
+      });
+    },
     "Couldn't open Google sign-in",
   );
 

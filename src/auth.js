@@ -7,11 +7,13 @@ let loading = null;
 // Clerk is large, so it is downloaded only when needed: to sign in or up, or at start-up for someone who was signed in
 // on this browser before (see `wasSignedIn`). Browsing as a guest never loads it.
 const HINT = 'zedmarket.signedIn';
+// Clerk also leaves a `__client_uat` cookie that is non-zero while a session exists, even if the hint was lost.
+const clerkHasSession = () => /(?:^|;\s*)__client_uat(?:_[\w-]+)?=[1-9]/.test(document.cookie);
 export const wasSignedIn = () => {
   try {
-    return localStorage.getItem(HINT) === '1';
+    return localStorage.getItem(HINT) === '1' || clerkHasSession();
   } catch {
-    return false;
+    return clerkHasSession();
   }
 };
 export function rememberSignedIn(yes) {
