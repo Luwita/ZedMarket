@@ -267,7 +267,7 @@ describe('invite codes and vouchers', () => {
     const first = (await order({ shipping: { ...shipping, name: 'Mapalo', phone: '0966300300' } }, friend.token)).body;
     const deliver = async (o) => {
       await api('PATCH', `/api/orders/${o.id}/shipments/${seller.shopId}`, { status: 'dispatched' }, seller.token);
-      await api('PATCH', `/api/orders/${o.id}/shipments/${seller.shopId}`, { status: 'delivered' }, seller.token);
+      await api('POST', `/api/orders/${o.id}/shipments/${seller.shopId}/received`, undefined, friend.token);
     };
     const rewards = async () =>
       (await api('GET', '/api/me/vouchers', undefined, buyer.token)).body.filter((v) => v.reason === 'referral');
@@ -354,5 +354,48 @@ describe('every category works end to end', () => {
   test('an unknown category is still refused', async () => {
     const bad = await api('POST', '/api/products', { name: 'Nope', category: 'weapons', price: 10, stock: 1 }, seller.token);
     assert.equal(bad.status, 400);
+  });
+});
+
+describe('the buyer confirms delivery', () => {
+  const url = (o) => `/api/orders/${o.id}/shipments/${seller.shopId}`;
+
+  test('the shop can send a parcel but only the buyer marks it received, and the shop is told', async () => {
+    const o = (await order()).body;
+    await api('PATCH', url(o), { status: 'dispatched' }, seller.token);
+    const refused = await api('PATCH', url(o), { status: 'delivered' }, seller.token);
+    assert.equal(refused.status, 403);
+    assert.equal((await api('POST', `${url(o)}/received`, undefined, admin.token)).status, 404, 'not their order');
+
+    const before = (await notificationsOf(seller.token)).length;
+    const done = await api('POST', `${url(o)}/received`, undefined, buyer.token);
+    assert.equal(done.status, 200);
+    assert.equal(done.body.shipments[0].status, 'delivered');
+    assert.ok(done.body.shipments[0].deliveredAt);
+    const told = (await notificationsOf(seller.token)).find((n) => n.title === `Delivered: order ${o.id}`);
+    assert.ok(told, 'the shop owner is told');
+    assert.match(told.body, /confirmed they received/);
+    assert.equal((await notificationsOf(seller.token)).length, before + 1);
+    assert.equal((await api('POST', `${url(o)}/received`, undefined, buyer.token)).status, 409, 'only once');
+  });
+
+  test('a parcel the buyer never confirms is marked delivered after a week, unless there is an open problem', async () => {
+    const { autoConfirmDelivered } = await import('./jobs.js');
+    const quiet = (await order()).body;
+    const disputed = (await order()).body;
+    for (const o of [quiet, disputed]) await api('PATCH', url(o), { status: 'dispatched' }, seller.token);
+    await db.query(`UPDATE shipments SET updated_at = now() - interval '8 days' WHERE order_id = ANY($1)`, [[quiet.id, disputed.id]]);
+    const [ship] = await db.query('SELECT id FROM shipments WHERE order_id = $1', [disputed.id]);
+    await db.query(
+      `INSERT INTO cases (id, order_id, shipment_id, shop_id, buyer_id, kind, reason, status)
+       VALUES ('case_auto_test', $1, $2, $3, $4, 'not_received', 'Never came', 'open')`,
+      [disputed.id, ship.id, seller.shopId, buyer.id ?? (await db.query('SELECT buyer_id FROM orders WHERE id = $1', [disputed.id]))[0].buyer_id],
+    );
+    await autoConfirmDelivered(db);
+    const status = async (id) => (await db.query('SELECT status FROM shipments WHERE order_id = $1', [id]))[0].status;
+    assert.equal(await status(quiet.id), 'delivered');
+    assert.equal(await status(disputed.id), 'dispatched', 'left for staff to settle');
+    const told = (await notificationsOf(seller.token)).find((n) => n.title === `Delivered: order ${quiet.id}`);
+    assert.match(told.body, /automatically/);
   });
 });

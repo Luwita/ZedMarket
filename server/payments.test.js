@@ -154,7 +154,7 @@ describe('Mobile Money paid straight to the shop', () => {
 
     assert.equal((await api('PATCH', url, { status: 'dispatched' }, seller.token)).status, 200);
     assert.match((await textsTo('966200200')).at(-1), /Ready to collect at Mutinta Appliances/);
-    assert.equal((await api('PATCH', url, { status: 'delivered' }, seller.token)).status, 200);
+    assert.equal((await api('POST', `${url}/received`, undefined, buyer.token)).status, 200);
 
     // The shop already has the money, so it owes Zed Market the 5% commission.
     const balance = (await api('GET', '/api/seller/payouts', undefined, seller.token)).body;

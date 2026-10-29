@@ -211,12 +211,14 @@ describe('shops, products and orders', () => {
     assert.equal(order.shipments[0].items[0].qty, 3);
 
     const url = `/api/orders/${order.id}/shipments/${seller.shopId}`;
-    assert.equal((await api('PATCH', url, { status: 'delivered' }, seller.token)).status, 409);
+    assert.equal((await api('PATCH', url, { status: 'delivered' }, seller.token)).status, 403, 'only the buyer confirms delivery');
+    assert.equal((await api('POST', `${url}/received`, undefined, buyer.token)).status, 409, 'not sent yet');
+    assert.equal((await api('POST', `${url}/received`, undefined, seller.token)).status, 404, 'not the buyer');
     assert.equal((await api('PATCH', url, { status: 'dispatched' }, buyer.token)).status, 403);
     const sent = await api('PATCH', url, { status: 'dispatched', tracking: 'YG-4471' }, seller.token);
     assert.equal(sent.body.shipments[0].tracking, 'YG-4471');
     assert.equal(
-      (await api('PATCH', url, { status: 'delivered' }, seller.token)).body.shipments[0].status,
+      (await api('POST', `${url}/received`, undefined, buyer.token)).body.shipments[0].status,
       'delivered',
     );
 

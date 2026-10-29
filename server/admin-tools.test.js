@@ -49,7 +49,7 @@ const order = (payment = 'momo') =>
   );
 const deliver = async (orderId) => {
   await api('PATCH', `/api/orders/${orderId}/shipments/${seller.shopId}`, { status: 'dispatched' }, seller.token);
-  await api('PATCH', `/api/orders/${orderId}/shipments/${seller.shopId}`, { status: 'delivered' }, seller.token);
+  await api('POST', `/api/orders/${orderId}/shipments/${seller.shopId}/received`, undefined, buyer.token);
 };
 // Pretend the parcel was delivered long enough ago for the return window to have passed.
 const clearReturnWindow = (orderId) =>

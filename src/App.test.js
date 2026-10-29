@@ -260,3 +260,21 @@ test('the shop owners QR code opens sign-up ready for a shop owner', async () =>
   expect(await screen.findByLabelText('I am a')).toHaveValue('seller');
   expect(screen.getByLabelText('Full name')).toBeInTheDocument(); // the sign-up form, not sign-in
 });
+
+test('the buyer presses "I\'ve collected it" when the parcel arrives, and the shop is told', async () => {
+  api.__signIn({ name: 'Chanda', phone: '0977000111' });
+  const order = await api.placeOrder({
+    items: [{ productId: 'p10', qty: 1 }],
+    shipping: { name: 'Chanda', phone: '0977000111', province: 'lusaka', town: 'Lusaka', address: 'Plot 1' },
+    couriers: { s2: 'pickup' },
+    payment: 'momo',
+  });
+  api.__db().orders[0].shipments[0].status = 'dispatched';
+
+  renderAt('/account');
+  fireEvent.click(await screen.findByRole('button', { name: "I've collected it" }));
+  await waitFor(() => expect(api.__db().orders[0].shipments[0].status).toBe('delivered'));
+  expect(screen.queryByRole('button', { name: "I've collected it" })).not.toBeInTheDocument();
+  const told = api.__db().notifications.find((n) => n.title === `Delivered: order ${order.id}`);
+  expect(told).toBeTruthy();
+});

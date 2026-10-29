@@ -533,10 +533,22 @@ export async function updateShipment(orderId, shopId, patch) {
   const order = db.orders.find((o) => o.id === orderId);
   const shipment = order?.shipments.find((s) => s.shopId === shopId);
   if (!shipment) throw new ApiError(404, 'Order not found');
+  if (patch.status === 'delivered') throw new ApiError(403, 'Your buyer confirms delivery from their account');
   if (order.payByMomo && !shipment.paid)
     throw new ApiError(409, "Confirm the buyer's Mobile Money payment before sending this parcel");
   Object.assign(shipment, patch);
   return copy({ ...order, shipments: [shipment] });
+}
+
+export async function confirmReceived(orderId, shopId) {
+  const order = db.orders.find((o) => o.id === orderId && o.buyerId === currentUser().id);
+  const shipment = order?.shipments.find((s) => s.shopId === shopId);
+  if (!shipment) throw new ApiError(404, 'Order not found');
+  if (shipment.status !== 'dispatched') throw new ApiError(409, `A ${shipment.status} parcel can't be marked delivered`);
+  Object.assign(shipment, { status: 'delivered', deliveredAt: new Date().toISOString() });
+  const shop = db.shops.find((x) => x.id === shopId);
+  note(shop.ownerId, 'order', `Delivered: order ${orderId}`, 'The buyer confirmed they received the parcel.', '/seller?tab=orders');
+  return copy(order);
 }
 
 export async function paymentSent(orderId, shopId, reference) {

@@ -370,7 +370,7 @@ describe('statements and account data', () => {
     const first = orders.find((o) => o.shipments[0].couponCode === 'FAN10');
     const url = `/api/orders/${first.id}/shipments/${seller.shopId}`;
     await api('PATCH', url, { status: 'dispatched' }, seller.token);
-    await api('PATCH', url, { status: 'delivered' }, seller.token);
+    await api('POST', `${url}/received`, undefined, buyer.token);
 
     const month = new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 7); // Zambian time
     const statement = (await api('GET', `/api/seller/statement?month=${month}`, undefined, seller.token)).body;
@@ -402,7 +402,7 @@ describe('statements and account data', () => {
     for (const o of (await api('GET', '/api/orders/mine', undefined, buyer.token)).body) {
       const url = `/api/orders/${o.id}/shipments/${seller.shopId}`;
       if (o.shipments[0].status === 'pending') await api('PATCH', url, { status: 'dispatched' }, seller.token);
-      if (o.shipments[0].status !== 'delivered') await api('PATCH', url, { status: 'delivered' }, seller.token);
+      if (o.shipments[0].status !== 'delivered') await api('POST', `${url}/received`, undefined, buyer.token);
     }
     const deleted = await api('DELETE', '/api/me', undefined, buyer.token);
     assert.equal(deleted.status, 200, JSON.stringify(deleted.body));

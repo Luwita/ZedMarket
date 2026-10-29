@@ -256,6 +256,8 @@ export const myOrders = () => request('GET', '/orders/mine');
 export const shopOrders = () => request('GET', '/orders/shop');
 export const updateShipment = (orderId, shopId, patch) =>
   request('PATCH', `/orders/${orderId}/shipments/${shopId}`, patch);
+// The buyer says the parcel reached them; that marks it delivered and tells the shop.
+export const confirmReceived = (orderId, shopId) => request('POST', `/orders/${orderId}/shipments/${shopId}/received`);
 export const quoteOrder = (order) => request('POST', '/orders/quote', order);
 // Mobile Money goes straight to the shop: the buyer says it was sent, the shop confirms it arrived.
 export const paymentSent = (orderId, shopId, reference) =>

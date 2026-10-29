@@ -75,6 +75,32 @@ function InvitePanel() {
 
 const roleLabel = { business: 'Business buyer', seller: 'Shop owner', buyer: 'Shopper' };
 
+// The buyer presses this when the parcel reaches them. It marks the parcel delivered and tells the shop.
+function ConfirmReceived({ order, shipment }) {
+  const { confirmReceived, notify } = useStore();
+  const [busy, setBusy] = useState(false);
+  const pickup = shipment.courier === 'pickup';
+  const press = async () => {
+    setBusy(true);
+    try {
+      await confirmReceived(order.id, shipment.shopId);
+      notify(`Thanks. ${shipment.shopName} has been told.`);
+    } catch (err) {
+      notify(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="received-row">
+      <button className="btn btn-primary btn-sm" disabled={busy} onClick={press}>
+        {pickup ? "I've collected it" : "I've received it"}
+      </button>
+      <span className="small muted">Press this once you have the parcel in your hands.</span>
+    </div>
+  );
+}
+
 // What a buyer can do with a parcel: cancel before it is sent, or report a problem afterwards.
 function ParcelActions({ order, shipment }) {
   if (shipment.status === 'pending') {
@@ -88,14 +114,20 @@ function ParcelActions({ order, shipment }) {
       />
     );
   }
+  const received = shipment.status === 'dispatched' && <ConfirmReceived order={order} shipment={shipment} />;
   const activeCase = shipment.latestCase && ['open', 'rejected', 'escalated'].includes(shipment.latestCase.status);
   const inWindow =
     shipment.status === 'dispatched' ||
     (shipment.status === 'delivered' &&
       shipment.deliveredAt &&
       new Date(shipment.deliveredAt) > new Date(Date.now() - RETURN_DAYS * 864e5));
-  if (activeCase || !inWindow) return null;
-  return <ReportProblem order={order} shipment={shipment} />;
+  if (activeCase || !inWindow) return received || null;
+  return (
+    <>
+      {received}
+      <ReportProblem order={order} shipment={shipment} />
+    </>
+  );
 }
 
 // The buyer's rights under the Data Protection Act: a copy of their data, and deleting the account.

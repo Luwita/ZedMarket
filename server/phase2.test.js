@@ -202,7 +202,7 @@ describe('weights, options, reviews and seller tools', () => {
 
     const url = `/api/orders/${orderId}/shipments/${seller.shopId}`;
     await api('PATCH', url, { status: 'dispatched' }, seller.token);
-    await api('PATCH', url, { status: 'delivered' }, seller.token);
+    await api('POST', `${url}/received`, undefined, buyer.token);
 
     const stranger = await signIn('0955500500');
     const notMine = await api('POST', '/api/reviews', { orderId, productId: shirtId, rating: 1 }, stranger.token);

@@ -57,7 +57,8 @@ const order = (extra = {}, token = buyer.token) =>
 const stockOf = async (id) => (await db.query('SELECT stock, sold FROM products WHERE id = $1', [id]))[0];
 const advance = async (o, ...steps) => {
   for (const status of steps)
-    await api('PATCH', `/api/orders/${o.id}/shipments/${seller.shopId}`, { status }, seller.token);
+    if (status === 'delivered') await api('POST', `/api/orders/${o.id}/shipments/${seller.shopId}/received`, undefined, buyer.token);
+    else await api('PATCH', `/api/orders/${o.id}/shipments/${seller.shopId}`, { status }, seller.token);
 };
 
 before(async () => {

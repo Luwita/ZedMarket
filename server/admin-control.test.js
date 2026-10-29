@@ -141,7 +141,7 @@ describe('platform settings', () => {
 
     for (const o of [before, afterChange]) {
       await api('PATCH', `/api/orders/${o.id}/shipments/${seller.shopId}`, { status: 'dispatched' }, seller.token);
-      await api('PATCH', `/api/orders/${o.id}/shipments/${seller.shopId}`, { status: 'delivered' }, seller.token);
+      await api('POST', `/api/orders/${o.id}/shipments/${seller.shopId}/received`, undefined, buyer.token);
     }
     const month = new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 7);
     const statement = (await api('GET', `/api/seller/statement?month=${month}`, undefined, seller.token)).body;

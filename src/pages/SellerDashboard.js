@@ -200,15 +200,10 @@ function OrderCard({ order, shipment }) {
         </div>
       )}
       {shipment.status === 'dispatched' && (
-        <div className="dispatch-row">
-          <button
-            className="btn btn-dark btn-sm"
-            disabled={busy}
-            onClick={() => advance({ status: 'delivered' }, 'Order marked as delivered')}
-          >
-            Mark as {pickup ? 'collected' : 'delivered'}
-          </button>
-        </div>
+        <p className="small muted dispatch-row">
+          Waiting for the buyer to confirm they {pickup ? 'collected' : 'received'} it. You'll be told, and it's confirmed
+          automatically after 7 days.
+        </p>
       )}
     </div>
   );

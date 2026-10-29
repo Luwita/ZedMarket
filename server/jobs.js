@@ -3,6 +3,7 @@ import { formatK } from '../src/utils/format.js';
 import { HttpError } from './http.js';
 import { notify, notifyShopOwner } from './notify.js';
 import { cancelShipment } from './queries.js';
+import { advanceShipment } from './routes/orders.js';
 import { getSettings } from './settings.js';
 
 const MOMO_PARCELS = `FROM shipments s JOIN orders o ON o.id = s.order_id JOIN shops sh ON sh.id = s.shop_id
@@ -102,14 +103,39 @@ export async function checkUnpaidOrders(db) {
   return done;
 }
 
+// Buyers confirm delivery themselves. If one never does, the parcel is marked delivered this many days after it was
+// sent, so the shop is still paid. A parcel with an open problem report is left for staff to settle.
+export const AUTO_DELIVER_DAYS = 7;
+export async function autoConfirmDelivered(db, days = AUTO_DELIVER_DAYS) {
+  const parcels = await db.query(
+    `SELECT s.order_id, s.shop_id FROM shipments s
+      WHERE s.status = 'dispatched' AND s.updated_at < now() - make_interval(days => $1)
+        AND NOT EXISTS (SELECT 1 FROM cases c WHERE c.shipment_id = s.id AND c.status IN ('open', 'rejected', 'escalated'))`,
+    [days],
+  );
+  let done = 0;
+  for (const p of parcels) {
+    try {
+      const [shop] = await db.query('SELECT * FROM shops WHERE id = $1', [p.shop_id]);
+      await advanceShipment(db, p.order_id, shop, { status: 'delivered' }, { auto: true });
+      done += 1;
+    } catch (err) {
+      if (!(err instanceof HttpError)) throw err;
+    }
+  }
+  return done;
+}
+
 // Runs the checks now and then every `minutes`. On a host that sleeps when idle, they run again on waking.
 export function startJobs(db, { minutes = 10 } = {}) {
   const run = () =>
     checkUnpaidOrders(db)
       .then((d) => {
         if (d.buyersReminded || d.shopsReminded || d.cancelled) console.log('[jobs] unpaid orders:', JSON.stringify(d));
+        return autoConfirmDelivered(db);
       })
-      .catch((err) => console.error(`[jobs] unpaid order check failed: ${err.message}`));
+      .then((n) => n && console.log(`[jobs] ${n} parcel(s) marked delivered automatically`))
+      .catch((err) => console.error(`[jobs] check failed: ${err.message}`));
   run();
   return setInterval(run, minutes * 60e3).unref();
 }

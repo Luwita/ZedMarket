@@ -314,9 +314,24 @@ export function orderRoutes(db) {
   router.patch('/:orderId/shipments/:shopId', async (req, res) => {
     const shop = await myShopOrFail(db, req.user);
     if (shop.id !== req.params.shopId) throw new HttpError(403, 'You can only update your own parcels');
-    await advanceShipment(db, req.params.orderId, shop, parse(shipmentUpdateSchema, req.body));
+    const update = parse(shipmentUpdateSchema, req.body);
+    if (update.status === 'delivered') {
+      throw new HttpError(403, 'Your buyer confirms delivery from their account, then you are told. You can mark a parcel sent.');
+    }
+    await advanceShipment(db, req.params.orderId, shop, update);
     const [order] = await db.query('SELECT * FROM orders WHERE id = $1', [req.params.orderId]);
     const [full] = await loadOrders(db, [order], shop.id);
+    res.json(full);
+  });
+
+  // The buyer says the parcel reached them. This is what marks it delivered, and tells the shop.
+  router.post('/:orderId/shipments/:shopId/received', async (req, res) => {
+    const [order] = await db.query('SELECT * FROM orders WHERE id = $1', [req.params.orderId]);
+    if (!order || order.buyer_id !== req.user.id) throw new HttpError(404, 'Order not found');
+    const [shop] = await db.query('SELECT * FROM shops WHERE id = $1', [req.params.shopId]);
+    if (!shop) throw new HttpError(404, 'Order not found');
+    await advanceShipment(db, order.id, shop, { status: 'delivered' }, { confirmedBy: order.buyer_name || 'The buyer' });
+    const [full] = await loadOrders(db, [order]);
     res.json(full);
   });
 
@@ -363,7 +378,8 @@ export const shipmentUpdateSchema = z.object({
 });
 
 // Moves a parcel to its next status and tells the buyer. Used by the shop, and by staff on the shop's behalf.
-export async function advanceShipment(db, orderId, shop, body) {
+// `confirmedBy` is set when the buyer (or the auto-confirm after a few days) is the one marking it delivered.
+export async function advanceShipment(db, orderId, shop, body, { confirmedBy = null, auto = false } = {}) {
   const [current] = await db.query(
     `SELECT s.status, s.paid_at, o.payment_status FROM shipments s JOIN orders o ON o.id = s.order_id
       WHERE s.order_id = $1 AND s.shop_id = $2`,
@@ -406,11 +422,24 @@ export async function advanceShipment(db, orderId, shop, body) {
               s.tracking && `tracking ${s.tracking}`,
               s.pickup_point,
               office && `Collect it with order number ${orderId} and your ID`,
+              'When you have it, press "I\'ve received it" in your orders',
             ]
               .filter(Boolean)
               .join(' · '),
       link: '/account',
     });
-    if (body.status === 'delivered') await rewardInviter(t, orderId);
+    if (body.status === 'delivered') {
+      await rewardInviter(t, orderId);
+      await notifyShopOwner(t, shop.id, {
+        kind: 'order',
+        title: `Delivered: order ${orderId}`,
+        body: auto
+          ? 'The buyer did not respond within a few days, so it was marked delivered automatically.'
+          : confirmedBy
+            ? `${confirmedBy} confirmed they received the parcel.`
+            : 'Zed Market marked the parcel delivered.',
+        link: '/seller?tab=orders',
+      });
+    }
   });
 }
