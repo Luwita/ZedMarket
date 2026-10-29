@@ -94,42 +94,51 @@ export function StorePage() {
 
   return (
     <div className="container section">
-      {shop.banner && <div className="store-banner" style={{ backgroundImage: `url(${shop.banner})` }} />}
-      <div className={`card dash-head ${shop.banner ? 'under-banner' : ''}`}>
-        <span className="shop-logo">{shop.logo ?? '🏪'}</span>
-        <div className="grow">
-          <h1>
-            {shop.name}{'\u00a0'}
-            {shop.verified && (
-              <span className="verified-badge" title="Verified by Zed Market">
-                ✓ Verified
-              </span>
+      <section className="card store-hero">
+        {shop.banner && <div className="store-banner" style={{ backgroundImage: `url(${shop.banner})` }} />}
+        <div className="store-hero-main">
+          <span className="shop-logo lg">{shop.logo ?? '🏪'}</span>
+          <div className="store-hero-info">
+            <h1>
+              {shop.name}
+              {shop.verified && (
+                <span className="pill pill-verified" title="Verified by Zed Market">
+                  ✓ Verified
+                </span>
+              )}
+            </h1>
+            {shop.suspended && <p className="error">This shop is not taking orders at the moment.</p>}
+            {!shop.verified && !shop.suspended && (
+              <p className="review-note">⏳ Only you can see this page until Zed Market approves your shop.</p>
             )}
-          </h1>
-          {shop.suspended && <p className="error">This shop is not taking orders at the moment.</p>}
-          {!shop.verified && !shop.suspended && (
-            <p className="review-note">⏳ Only you can see this page until Zed Market approves your shop.</p>
-          )}
-          <p className="muted">
-            <Icon name="pin" size={14} className="inline-icon" />{shop.area ? `${shop.area}, ` : ''}
-            {formatLocation(shop)} ·{' '}
-            {shop.rating
-              ? `★ ${shop.rating}${shop.reviewCount ? ` (${shop.reviewCount} reviews)` : ''}`
-              : 'New shop'}{' '}
-            · On Zed Market since {shop.since}
-          </p>
-          {shop.openingHours && <p className="small">🕘 {shop.openingHours}</p>}
-          <CourierChips ids={shop.couriers} />
+            <ul className="store-facts">
+              <li>
+                <Icon name="pin" size={14} className="inline-icon" />
+                {shop.area ? `${shop.area}, ` : ''}
+                {formatLocation(shop)}
+              </li>
+              <li>
+                {shop.rating
+                  ? `★ ${shop.rating}${shop.reviewCount ? ` (${shop.reviewCount} reviews)` : ''}`
+                  : 'New shop'}
+              </li>
+              <li>On Zed Market since {shop.since}</li>
+              {shop.openingHours && <li>🕘 {shop.openingHours}</li>}
+            </ul>
+            <CourierChips ids={shop.couriers} />
+          </div>
         </div>
-        <ShareButton title={shop.name} text={`${shop.name} on Zed Market`} path={`/store/${shop.id}`} />
-        <a className="btn btn-outline" href={directions} target="_blank" rel="noopener noreferrer">
-          🧭 Directions
-        </a>
-        <a className="btn btn-primary" href={`https://wa.me/${phone}`} target="_blank" rel="noopener noreferrer">
-          💬 WhatsApp shop
-        </a>
-        <AskShop shop={shop} label="✉️ Message shop" />
-      </div>
+        <div className="store-actions">
+          <a className="btn btn-primary" href={`https://wa.me/${phone}`} target="_blank" rel="noopener noreferrer">
+            💬 WhatsApp shop
+          </a>
+          <AskShop shop={shop} label="✉️ Message shop" />
+          <a className="btn btn-outline" href={directions} target="_blank" rel="noopener noreferrer">
+            🧭 Directions
+          </a>
+          <ShareButton title={shop.name} text={`${shop.name} on Zed Market`} path={`/store/${shop.id}`} />
+        </div>
+      </section>
 
       {shop.about && (
         <section className="card store-about">

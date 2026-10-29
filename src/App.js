@@ -8,6 +8,7 @@ import './admin.css';
 import './features.css';
 import './responsive.css';
 import './mobile.css';
+import './modern.css';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import TabBar from './components/TabBar';

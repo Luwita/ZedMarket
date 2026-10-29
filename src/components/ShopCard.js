@@ -21,23 +21,27 @@ export function CourierChips({ ids }) {
 export default function ShopCard({ shop }) {
   return (
     <Link to={`/store/${shop.id}`} className="card shop-card">
-      <span className="shop-logo">{shop.logo ?? '🏪'}</span>
-      <div className="shop-card-body">
-        <h3>
-          {shop.name}{'\u00a0'}
-          {shop.verified && (
-            <span className="verified-badge" title="Verified by Zed Market">
-              ✓
+      <div className="shop-card-top">
+        <span className="shop-logo">{shop.logo ?? '🏪'}</span>
+        <div className="shop-card-body">
+          <h3 title={shop.name}>{shop.name}</h3>
+          <div className="shop-card-loc">
+            <Icon name="pin" size={14} className="inline-icon" />
+            <span>
+              {shop.area ? `${shop.area}, ` : ''}
+              {formatLocation(shop)}
             </span>
-          )}
-        </h3>
-        <div className="muted small">
-          <Icon name="pin" size={14} className="inline-icon" />{shop.area ? `${shop.area}, ` : ''}
-          {formatLocation(shop)}
+          </div>
         </div>
-        <div className="small">
-          {shop.rating ? `★ ${shop.rating}` : 'New shop'} · {shop.productCount ?? 0} products
-        </div>
+      </div>
+      <div className="shop-card-foot">
+        <span className="pill pill-rating">{shop.rating ? `★ ${shop.rating}` : 'New shop'}</span>
+        <span className="pill">{shop.productCount ?? 0} products</span>
+        {shop.verified && (
+          <span className="pill pill-verified" title="Verified by Zed Market">
+            ✓ Verified
+          </span>
+        )}
       </div>
     </Link>
   );
