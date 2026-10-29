@@ -313,3 +313,46 @@ describe('resell and shop pages', () => {
     assert.equal(bad.status, 400, 'only uploaded images');
   });
 });
+
+describe('every category works end to end', () => {
+  test('a product in each category can be listed, found by category and ordered', async () => {
+    const { categories } = await import('../src/data/catalog.js');
+    assert.ok(categories.length >= 22);
+    for (const c of categories) {
+      const made = await api(
+        'POST',
+        '/api/products',
+        { name: `Test item for ${c.id}`, category: c.id, price: 120, stock: 5, weightKg: 1 },
+        seller.token
+      );
+      assert.equal(made.status, 201, `${c.id}: ${JSON.stringify(made.body)}`);
+      assert.equal(made.body.category, c.id);
+      assert.equal(made.body.icon, c.icon, `${c.id} uses its category icon`);
+      const found = await api('GET', `/api/products?cat=${c.id}`);
+      assert.ok(
+        found.body.items.some((p) => p.id === made.body.id),
+        `${c.id} shows when filtering by that category`
+      );
+      assert.ok(found.body.items.every((p) => p.category === c.id), `${c.id} filter only returns its own products`);
+      const bought = await api(
+        'POST',
+        '/api/orders',
+        { items: [{ productId: made.body.id, qty: 1 }], shipping, couriers: { [seller.shopId]: 'pickup' }, payment: 'momo' },
+        buyer.token
+      );
+      assert.equal(bought.status, 201, `${c.id} can be ordered: ${JSON.stringify(bought.body)}`);
+      const request = await api(
+        'POST',
+        '/api/buying-requests',
+        { title: `Need ${c.id}`, description: 'Looking for a good supplier', category: c.id, qty: 2, unit: 'pcs', province: 'lusaka', town: 'Lusaka' },
+        buyer.token
+      );
+      assert.equal(request.status, 201, `${c.id} buying request: ${JSON.stringify(request.body)}`);
+    }
+  });
+
+  test('an unknown category is still refused', async () => {
+    const bad = await api('POST', '/api/products', { name: 'Nope', category: 'weapons', price: 10, stock: 1 }, seller.token);
+    assert.equal(bad.status, 400);
+  });
+});

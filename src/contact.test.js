@@ -30,3 +30,14 @@ test('photos under 400 pixels on the short side are flagged as small', () => {
   expect(isSmallPhoto({ width: 800, height: 600 })).toBe(false);
   expect(isSmallPhoto(null)).toBe(false);
 });
+
+test('every category is on the categories page and opens a filtered shop list', async () => {
+  const { categories } = require('./data/catalog');
+  expect(categories.length).toBeGreaterThanOrEqual(22);
+  window.history.pushState({}, '', '/categories');
+  render(<App />);
+  for (const c of categories) {
+    const links = await screen.findAllByRole('link', { name: new RegExp(c.name.replace(/[.*+?^${}()|[\]\&]/g, '\$&')) });
+    expect(links.some((l) => l.getAttribute('href') === `/shop?cat=${c.id}`)).toBe(true);
+  }
+});
