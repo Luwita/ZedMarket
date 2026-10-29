@@ -379,12 +379,14 @@ describe('the buyer confirms delivery', () => {
     assert.equal((await api('POST', `${url(o)}/received`, undefined, buyer.token)).status, 409, 'only once');
   });
 
-  test('a parcel the buyer never confirms is marked delivered after 24 hours, unless there is an open problem', async () => {
+  test('a parcel the buyer never confirms is marked delivered after 24 hours (48 between provinces), unless there is an open problem', async () => {
     const { autoConfirmDelivered } = await import('./jobs.js');
     const quiet = (await order()).body;
     const disputed = (await order()).body;
-    for (const o of [quiet, disputed]) await api('PATCH', url(o), { status: 'dispatched' }, seller.token);
-    await db.query(`UPDATE shipments SET updated_at = now() - interval '25 hours' WHERE order_id = ANY($1)`, [[quiet.id, disputed.id]]);
+    const faraway = (await order()).body;
+    await db.query(`UPDATE orders SET province = 'copperbelt' WHERE id = $1`, [faraway.id]);
+    for (const o of [quiet, disputed, faraway]) await api('PATCH', url(o), { status: 'dispatched' }, seller.token);
+    await db.query(`UPDATE shipments SET updated_at = now() - interval '25 hours' WHERE order_id = ANY($1)`, [[quiet.id, disputed.id, faraway.id]]);
     const [ship] = await db.query('SELECT id FROM shipments WHERE order_id = $1', [disputed.id]);
     await db.query(
       `INSERT INTO cases (id, order_id, shipment_id, shop_id, buyer_id, kind, reason, status)
@@ -394,6 +396,10 @@ describe('the buyer confirms delivery', () => {
     await autoConfirmDelivered(db);
     const status = async (id) => (await db.query('SELECT status FROM shipments WHERE order_id = $1', [id]))[0].status;
     assert.equal(await status(quiet.id), 'delivered');
+    assert.equal(await status(faraway.id), 'dispatched', '25 hours is not enough between provinces');
+    await db.query(`UPDATE shipments SET updated_at = now() - interval '49 hours' WHERE order_id = $1`, [faraway.id]);
+    await autoConfirmDelivered(db);
+    assert.equal(await status(faraway.id), 'delivered');
     assert.equal(await status(disputed.id), 'dispatched', 'left for staff to settle');
     const told = (await notificationsOf(seller.token)).find((n) => n.title === `Delivered: order ${quiet.id}`);
     assert.match(told.body, /automatically/);

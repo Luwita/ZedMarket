@@ -434,7 +434,7 @@ export async function advanceShipment(db, orderId, shop, body, { confirmedBy = n
         kind: 'order',
         title: `Delivered: order ${orderId}`,
         body: auto
-          ? 'The buyer did not respond within 24 hours, so it was marked delivered automatically.'
+          ? 'The buyer did not respond in time, so it was marked delivered automatically.'
           : confirmedBy
             ? `${confirmedBy} confirmed they received the parcel.`
             : 'Zed Market marked the parcel delivered.',

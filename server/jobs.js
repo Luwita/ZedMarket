@@ -104,14 +104,21 @@ export async function checkUnpaidOrders(db) {
 }
 
 // Buyers confirm delivery themselves. If one never does, the parcel is marked delivered this many hours after it was
-// sent, so the shop is still paid. A parcel with an open problem report is left for staff to settle.
+// sent (longer when it goes to another province), so the shop is still paid. A parcel with an open problem report is left for staff to settle.
 export const AUTO_DELIVER_HOURS = 24;
-export async function autoConfirmDelivered(db, hours = AUTO_DELIVER_HOURS) {
+export const AUTO_DELIVER_HOURS_BETWEEN_PROVINCES = 48;
+export async function autoConfirmDelivered(
+  db,
+  hours = AUTO_DELIVER_HOURS,
+  farHours = AUTO_DELIVER_HOURS_BETWEEN_PROVINCES,
+) {
   const parcels = await db.query(
     `SELECT s.order_id, s.shop_id FROM shipments s
-      WHERE s.status = 'dispatched' AND s.updated_at < now() - make_interval(hours => $1)
+       JOIN orders o ON o.id = s.order_id JOIN shops sh ON sh.id = s.shop_id
+      WHERE s.status = 'dispatched'
+        AND s.updated_at < now() - make_interval(hours => CASE WHEN o.province = sh.province THEN $1::int ELSE $2::int END)
         AND NOT EXISTS (SELECT 1 FROM cases c WHERE c.shipment_id = s.id AND c.status IN ('open', 'rejected', 'escalated'))`,
-    [hours],
+    [hours, farHours],
   );
   let done = 0;
   for (const p of parcels) {
