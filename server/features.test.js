@@ -379,12 +379,12 @@ describe('the buyer confirms delivery', () => {
     assert.equal((await api('POST', `${url(o)}/received`, undefined, buyer.token)).status, 409, 'only once');
   });
 
-  test('a parcel the buyer never confirms is marked delivered after a week, unless there is an open problem', async () => {
+  test('a parcel the buyer never confirms is marked delivered after 24 hours, unless there is an open problem', async () => {
     const { autoConfirmDelivered } = await import('./jobs.js');
     const quiet = (await order()).body;
     const disputed = (await order()).body;
     for (const o of [quiet, disputed]) await api('PATCH', url(o), { status: 'dispatched' }, seller.token);
-    await db.query(`UPDATE shipments SET updated_at = now() - interval '8 days' WHERE order_id = ANY($1)`, [[quiet.id, disputed.id]]);
+    await db.query(`UPDATE shipments SET updated_at = now() - interval '25 hours' WHERE order_id = ANY($1)`, [[quiet.id, disputed.id]]);
     const [ship] = await db.query('SELECT id FROM shipments WHERE order_id = $1', [disputed.id]);
     await db.query(
       `INSERT INTO cases (id, order_id, shipment_id, shop_id, buyer_id, kind, reason, status)

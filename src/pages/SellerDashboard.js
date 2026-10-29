@@ -202,7 +202,7 @@ function OrderCard({ order, shipment }) {
       {shipment.status === 'dispatched' && (
         <p className="small muted dispatch-row">
           Waiting for the buyer to confirm they {pickup ? 'collected' : 'received'} it. You'll be told, and it's confirmed
-          automatically after 7 days.
+          automatically after 24 hours.
         </p>
       )}
     </div>
