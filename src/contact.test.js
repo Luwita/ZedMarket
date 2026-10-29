@@ -33,7 +33,7 @@ test('photos under 400 pixels on the short side are flagged as small', () => {
 
 test('every category is on the categories page and opens a filtered shop list', async () => {
   const { categories } = require('./data/catalog');
-  expect(categories.length).toBeGreaterThanOrEqual(22);
+  expect(categories.length).toBeGreaterThanOrEqual(21);
   window.history.pushState({}, '', '/categories');
   render(<App />);
   for (const c of categories) {

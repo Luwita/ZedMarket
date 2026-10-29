@@ -7,7 +7,7 @@ export const categories = [
   { id: 'electronics', name: 'Electronics', icon: '📺', color: '#5e35b1' },
   { id: 'solar', name: 'Solar & Power', icon: '☀️', color: '#f9a825' },
   { id: 'fashion', name: 'Fashion & Chitenge', icon: '👗', color: '#d81b60' },
-  { id: 'home', name: 'Home & Kitchen', icon: '🍳', color: '#00897b' },
+  { id: 'home', name: 'Home, Kitchen & Cleaning', icon: '🍳', color: '#00897b' },
   { id: 'beauty', name: 'Health & Beauty', icon: '💄', color: '#ec407a' },
   { id: 'agri', name: 'Farming & Agro', icon: '🌽', color: '#558b2f' },
   { id: 'building', name: 'Building & Hardware', icon: '🧱', color: '#6d4c41' },
@@ -24,7 +24,6 @@ export const categories = [
   { id: 'music', name: 'Music & Entertainment', icon: '🎸', color: '#00838f' },
   { id: 'gaming', name: 'Gaming', icon: '🎮', color: '#283593' },
   { id: 'crafts', name: 'Crafts & Local Art', icon: '🧺', color: '#bf360c' },
-  { id: 'cleaning', name: 'Cleaning & Household', icon: '🧼', color: '#0288d1' },
 ];
 
 const raw = [

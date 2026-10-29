@@ -317,7 +317,7 @@ describe('resell and shop pages', () => {
 describe('every category works end to end', () => {
   test('a product in each category can be listed, found by category and ordered', async () => {
     const { categories } = await import('../src/data/catalog.js');
-    assert.ok(categories.length >= 22);
+    assert.ok(categories.length >= 21);
     for (const c of categories) {
       const made = await api(
         'POST',
