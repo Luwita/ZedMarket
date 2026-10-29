@@ -317,7 +317,7 @@ describe('resell and shop pages', () => {
 describe('every category works end to end', () => {
   test('a product in each category can be listed, found by category and ordered', async () => {
     const { categories } = await import('../src/data/catalog.js');
-    assert.ok(categories.length >= 21);
+    assert.ok(categories.length >= 22);
     for (const c of categories) {
       const made = await api(
         'POST',
@@ -340,7 +340,8 @@ describe('every category works end to end', () => {
         { items: [{ productId: made.body.id, qty: 1 }], shipping, couriers: { [seller.shopId]: 'pickup' }, payment: 'momo' },
         buyer.token
       );
-      assert.equal(bought.status, 201, `${c.id} can be ordered: ${JSON.stringify(bought.body)}`);
+      if (c.enquiry) assert.equal(bought.status, 409, `${c.id} is enquiry-only: ${JSON.stringify(bought.body)}`);
+      else assert.equal(bought.status, 201, `${c.id} can be ordered: ${JSON.stringify(bought.body)}`);
       const request = await api(
         'POST',
         '/api/buying-requests',
@@ -379,29 +380,85 @@ describe('the buyer confirms delivery', () => {
     assert.equal((await api('POST', `${url(o)}/received`, undefined, buyer.token)).status, 409, 'only once');
   });
 
-  test('a parcel the buyer never confirms is marked delivered after 24 hours (48 between provinces), unless there is an open problem', async () => {
+  test('how long a parcel waits depends on where it goes and whether the buyer collects it', async () => {
+    const { autoDeliverHours } = await import('../src/data/couriers.js');
+    assert.equal(autoDeliverHours('seller', true), 24);
+    assert.equal(autoDeliverHours('yango', false), 48);
+    assert.equal(autoDeliverHours('pickup', true), 48);
+    assert.equal(autoDeliverHours('bus', true), 48);
+    assert.equal(autoDeliverHours('bus', false), 72);
+    assert.equal(autoDeliverHours('point', false), 72);
+  });
+
+  test('buyers are asked first, then an unconfirmed parcel is marked delivered, unless there is an open problem', async () => {
     const { autoConfirmDelivered } = await import('./jobs.js');
-    const quiet = (await order()).body;
-    const disputed = (await order()).body;
-    const faraway = (await order()).body;
-    await db.query(`UPDATE orders SET province = 'copperbelt' WHERE id = $1`, [faraway.id]);
-    for (const o of [quiet, disputed, faraway]) await api('PATCH', url(o), { status: 'dispatched' }, seller.token);
-    await db.query(`UPDATE shipments SET updated_at = now() - interval '25 hours' WHERE order_id = ANY($1)`, [[quiet.id, disputed.id, faraway.id]]);
-    const [ship] = await db.query('SELECT id FROM shipments WHERE order_id = $1', [disputed.id]);
+    const door = { couriers: { [seller.shopId]: 'seller' } };
+    const near = (await order(door)).body;
+    const far = (await order(door)).body;
+    const collect = (await order()).body;
+    const disputed = (await order(door)).body;
+    await db.query(`UPDATE orders SET province = 'copperbelt' WHERE id = $1`, [far.id]);
+    const all = [near, far, collect, disputed];
+    for (const o of all) await api('PATCH', url(o), { status: 'dispatched' }, seller.token);
+    const age = (hours, ...orders) =>
+      db.query(`UPDATE shipments SET updated_at = now() - make_interval(hours => $1) WHERE order_id = ANY($2)`, [hours, orders.map((o) => o.id)]);
+    const [ship] = await db.query('SELECT id, order_id FROM shipments WHERE order_id = $1', [disputed.id]);
+    const [{ buyer_id: buyerId }] = await db.query('SELECT buyer_id FROM orders WHERE id = $1', [disputed.id]);
     await db.query(
       `INSERT INTO cases (id, order_id, shipment_id, shop_id, buyer_id, kind, reason, status)
        VALUES ('case_auto_test', $1, $2, $3, $4, 'not_received', 'Never came', 'open')`,
-      [disputed.id, ship.id, seller.shopId, buyer.id ?? (await db.query('SELECT buyer_id FROM orders WHERE id = $1', [disputed.id]))[0].buyer_id],
+      [disputed.id, ship.id, seller.shopId, buyerId],
     );
-    await autoConfirmDelivered(db);
-    const status = async (id) => (await db.query('SELECT status FROM shipments WHERE order_id = $1', [id]))[0].status;
-    assert.equal(await status(quiet.id), 'delivered');
-    assert.equal(await status(faraway.id), 'dispatched', '25 hours is not enough between provinces');
-    await db.query(`UPDATE shipments SET updated_at = now() - interval '49 hours' WHERE order_id = $1`, [faraway.id]);
-    await autoConfirmDelivered(db);
-    assert.equal(await status(faraway.id), 'delivered');
-    assert.equal(await status(disputed.id), 'dispatched', 'left for staff to settle');
-    const told = (await notificationsOf(seller.token)).find((n) => n.title === `Delivered: order ${quiet.id}`);
-    assert.match(told.body, /automatically/);
+    const status = async (o) => (await db.query('SELECT status FROM shipments WHERE order_id = $1', [o.id]))[0].status;
+
+    await age(25, ...all);
+    assert.deepEqual(await autoConfirmDelivered(db), { delivered: 1, reminded: 0 });
+    assert.equal(await status(near), 'delivered');
+    assert.equal(await status(far), 'dispatched', '25 hours is not enough to another province');
+    assert.equal(await status(collect), 'dispatched', 'collect parcels wait a day longer');
+    const toldShop = (await notificationsOf(seller.token)).find((n) => n.title === `Delivered: order ${near.id}`);
+    assert.match(toldShop.body, /automatically/);
+
+    await age(43, far, collect, disputed);
+    assert.deepEqual(await autoConfirmDelivered(db), { delivered: 0, reminded: 2 }, 'asked once, a few hours before');
+    assert.deepEqual(await autoConfirmDelivered(db), { delivered: 0, reminded: 0 }, 'not asked twice');
+    const asked = (await notificationsOf(buyer.token)).filter((n) => n.title.startsWith('Did your order'));
+    assert.ok(asked.length >= 2);
+    assert.match(asked[0].body, /received it/);
+
+    await age(49, far, collect, disputed);
+    assert.deepEqual(await autoConfirmDelivered(db), { delivered: 2, reminded: 0 });
+    assert.equal(await status(far), 'delivered');
+    assert.equal(await status(collect), 'delivered');
+    assert.equal(await status(disputed), 'dispatched', 'left for staff to settle');
+  });
+});
+
+describe('second-hand items and enquiry listings', () => {
+  test('a product can be new, refurbished or used, and buyers can filter for second-hand', async () => {
+    const used = await api('POST', '/api/products', { name: 'Used Samsung A12', category: 'phones', condition: 'used', price: 900, stock: 1 }, seller.token);
+    assert.equal(used.status, 201);
+    assert.equal(used.body.condition, 'used');
+    const plain = await api('POST', '/api/products', { name: 'Brand new radio', category: 'electronics', price: 300, stock: 4 }, seller.token);
+    assert.equal(plain.body.condition, 'new', 'defaults to new');
+    const only = (await api('GET', '/api/products?secondHand=1')).body.items;
+    assert.ok(only.some((p) => p.id === used.body.id));
+    assert.ok(only.every((p) => p.condition !== 'new'));
+    assert.ok((await api('GET', '/api/products?cond=used')).body.items.every((p) => p.condition === 'used'));
+    const edited = await api('PATCH', `/api/products/${used.body.id}`, { name: 'Used Samsung A12', category: 'phones', condition: 'refurbished', price: 950, stock: 1 }, seller.token);
+    assert.equal(edited.body.condition, 'refurbished');
+    assert.equal((await api('POST', '/api/products', { name: 'Odd', category: 'phones', condition: 'broken', price: 1, stock: 1 }, seller.token)).status, 400);
+  });
+
+  test('services, property and vehicles can be listed and found, but not put in an order or quote', async () => {
+    const svc = await api('POST', '/api/products', { name: 'Solar installation', category: 'services', price: 1500, stock: 1 }, seller.token);
+    assert.equal(svc.status, 201);
+    assert.ok((await api('GET', '/api/products?cat=services')).body.items.some((p) => p.id === svc.body.id));
+    const items = [{ productId: svc.body.id, qty: 1 }];
+    const quote = await api('POST', '/api/orders/quote', { items, shipping, couriers: { [seller.shopId]: 'pickup' }, payment: 'momo' }, buyer.token);
+    assert.equal(quote.status, 409);
+    assert.match(quote.body.error, /Contact the seller/);
+    const bought = await api('POST', '/api/orders', { items, shipping, couriers: { [seller.shopId]: 'pickup' }, payment: 'momo' }, buyer.token);
+    assert.equal(bought.status, 409);
   });
 });

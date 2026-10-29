@@ -4,10 +4,10 @@
 
 export const categories = [
   { id: 'phones', name: 'Phones & Tablets', icon: '📱', color: '#1e88e5' },
-  { id: 'electronics', name: 'Electronics', icon: '📺', color: '#5e35b1' },
+  { id: 'electronics', name: 'Electronics & Gaming', icon: '📺', color: '#5e35b1' },
   { id: 'solar', name: 'Solar & Power', icon: '☀️', color: '#f9a825' },
-  { id: 'fashion', name: 'Fashion & Chitenge', icon: '👗', color: '#d81b60' },
-  { id: 'home', name: 'Home, Kitchen & Cleaning', icon: '🍳', color: '#00897b' },
+  { id: 'fashion', name: 'Fashion, Bags & Shoes', icon: '👗', color: '#d81b60' },
+  { id: 'home', name: 'Home, Kitchen, Furniture & Cleaning', icon: '🍳', color: '#00897b' },
   { id: 'beauty', name: 'Health & Beauty', icon: '💄', color: '#ec407a' },
   { id: 'agri', name: 'Farming & Agro', icon: '🌽', color: '#558b2f' },
   { id: 'building', name: 'Building & Hardware', icon: '🧱', color: '#6d4c41' },
@@ -15,16 +15,46 @@ export const categories = [
   { id: 'baby', name: 'Baby & Kids', icon: '🧸', color: '#fb8c00' },
   { id: 'grocery', name: 'Groceries', icon: '🛒', color: '#43a047' },
   { id: 'office', name: 'Office & School', icon: '🎒', color: '#3949ab' },
-  { id: 'furniture', name: 'Furniture & Décor', icon: '🛋️', color: '#8d6e63' },
   { id: 'sports', name: 'Sports & Fitness', icon: '⚽', color: '#2e7d32' },
   { id: 'books', name: 'Books & Stationery', icon: '📚', color: '#5c6bc0' },
   { id: 'pets', name: 'Pets & Livestock Supplies', icon: '🐾', color: '#ef6c00' },
   { id: 'jewellery', name: 'Jewellery & Watches', icon: '⌚', color: '#c2185b' },
-  { id: 'bags', name: 'Bags, Shoes & Luggage', icon: '👜', color: '#6a1b9a' },
   { id: 'music', name: 'Music & Entertainment', icon: '🎸', color: '#00838f' },
-  { id: 'gaming', name: 'Gaming', icon: '🎮', color: '#283593' },
   { id: 'crafts', name: 'Crafts & Local Art', icon: '🧺', color: '#bf360c' },
+  // Perishable food: listed and ordered like any product, but buyers are told to expect quick delivery.
+  { id: 'fresh', name: 'Fresh Food & Produce', icon: '🥬', color: '#2e7d32', perishable: true },
+  // Listings people enquire about instead of buying in the cart: the shop is called, messaged or visited.
+  { id: 'services', name: 'Services', icon: '🛠️', color: '#546e7a', enquiry: true },
+  { id: 'property', name: 'Property & Rentals', icon: '🏠', color: '#795548', enquiry: true },
+  { id: 'vehicles', name: 'Vehicles', icon: '🚗', color: '#37474f', enquiry: true },
 ];
+
+// Older names and ids (from spreadsheets and earlier versions) and the category each one became.
+export const categoryAliases = {
+  'fashion & chitenge': 'fashion',
+  'electronics': 'electronics',
+  'home & kitchen': 'home',
+  'home, kitchen & cleaning': 'home',
+  'furniture & décor': 'home',
+  furniture: 'home',
+  'cleaning & household': 'home',
+  cleaning: 'home',
+  'bags, shoes & luggage': 'fashion',
+  bags: 'fashion',
+  gaming: 'electronics',
+};
+
+// Enquiry categories (services, property, vehicles) have no cart or checkout.
+export const isEnquiryCategory = (id) => !!categories.find((c) => c.id === id)?.enquiry;
+export const isPerishableCategory = (id) => !!categories.find((c) => c.id === id)?.perishable;
+
+// Condition of an item. Anything that isn't brand new is shown as second-hand.
+export const conditions = [
+  { id: 'new', name: 'Brand new' },
+  { id: 'refurbished', name: 'Refurbished' },
+  { id: 'used', name: 'Used (second-hand)' },
+];
+export const conditionName = (id) => conditions.find((c) => c.id === id)?.name ?? 'Brand new';
 
 const raw = [
   // id, name, category, icon, price, old price, tiers, rating, sold, shop, stock, badge, made in Zambia

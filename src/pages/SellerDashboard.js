@@ -8,6 +8,7 @@ import VerificationPanel, { ShopNotices } from '../components/Verification';
 import Promotions from '../components/Promotions';
 import { QrCard } from '../components/AdminQr';
 import ContactLinks from '../components/ContactLinks';
+import { autoDeliverHours } from '../data/couriers';
 import { ProductImage } from '../components/ProductCard';
 import ProductForm from '../components/ProductForm';
 import { SalesReport, ShopReviews } from '../components/SellerInsights';
@@ -76,7 +77,7 @@ function BatchDispatch({ orders }) {
 }
 
 function OrderCard({ order, shipment }) {
-  const { updateShipment, confirmPayment, notify } = useStore();
+  const { updateShipment, confirmPayment, notify, getShop } = useStore();
   const [tracking, setTracking] = useState(shipment.tracking);
   const [busy, setBusy] = useState(false);
   const pickup = shipment.courier === 'pickup';
@@ -202,7 +203,7 @@ function OrderCard({ order, shipment }) {
       {shipment.status === 'dispatched' && (
         <p className="small muted dispatch-row">
           Waiting for the buyer to confirm they {pickup ? 'collected' : 'received'} it. You'll be told, and it's confirmed
-          automatically after 24 hours (48 hours when it goes to another province).
+          automatically after {autoDeliverHours(shipment.courier, order.shipping.province === getShop(shipment.shopId)?.province)} hours.
         </p>
       )}
     </div>

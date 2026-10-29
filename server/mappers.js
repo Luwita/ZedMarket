@@ -58,6 +58,7 @@ export const toProduct = (row) => ({
   shopId: row.shop_id,
   name: row.name,
   category: row.category,
+  condition: row.condition ?? 'new',
   icon: row.icon,
   description: row.description,
   price: num(row.price),

@@ -601,3 +601,29 @@ h2 {
   gap: 8px 12px;
   margin-top: 10px;
 }
+
+/* Condition and freshness labels on product cards; the contact panel for listings that aren't bought online. */
+.card-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -2px 0 6px;
+}
+.enquiry-panel {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+}
+.enquiry-panel p {
+  margin: 0 0 12px;
+}
+.notice {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: #fff6df;
+  color: #8a5a00;
+  font-size: 0.88rem;
+}

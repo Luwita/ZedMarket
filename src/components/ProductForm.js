@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { categories } from '../data/catalog';
+import { categories, conditions, isEnquiryCategory } from '../data/catalog';
 import { MIN_PHOTO_SIDE, compressImage, isSmallPhoto, measureImage } from '../utils/image';
 
 const MAX_PHOTOS = 4;
@@ -7,6 +7,7 @@ const MAX_PHOTOS = 4;
 const blank = {
   name: '',
   category: '',
+  condition: 'new',
   price: '',
   oldPrice: '',
   stock: '',
@@ -33,6 +34,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, submitLabel =
   const [uploading, setUploading] = useState(false);
   const [photoNote, setPhotoNote] = useState(null);
   const [saving, setSaving] = useState(false);
+  const enquiry = isEnquiryCategory(form.category);
   const set = (k) => (e) =>
     setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
 
@@ -89,8 +91,8 @@ export default function ProductForm({ initial, onSubmit, onCancel, submitLabel =
     if (!form.category) errs.category = 'Choose a category';
     if (!(price > 0)) errs.price = 'Enter a price in Kwacha';
     if (form.oldPrice && Number(form.oldPrice) <= price) errs.oldPrice = 'Was-price must be higher than the price';
-    if (!(Number(form.stock) >= 0) || form.stock === '') errs.stock = 'Enter how many you have';
-    if (!(Number(form.weightKg) > 0)) errs.weightKg = 'Enter the weight of one unit in kg, e.g. 0.5';
+    if (!enquiry && (!(Number(form.stock) >= 0) || form.stock === '')) errs.stock = 'Enter how many you have';
+    if (!enquiry && !(Number(form.weightKg) > 0)) errs.weightKg = 'Enter the weight of one unit in kg, e.g. 0.5';
     if (options.some((o) => !o.name || !o.values.length))
       errs.options = 'Give each option a name and at least one choice, e.g. Size: S, M, L';
     if (
@@ -106,10 +108,11 @@ export default function ProductForm({ initial, onSubmit, onCancel, submitLabel =
       await onSubmit({
         name: form.name.trim(),
         category: form.category,
+        condition: form.condition,
         price,
         oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
-        stock: Number(form.stock),
-        weightKg: Number(form.weightKg),
+        stock: enquiry ? 1 : Number(form.stock),
+        weightKg: enquiry ? 1 : Number(form.weightKg),
         lowStockAt: Number(form.lowStockAt) || 0,
         options,
         description: form.description.trim() || form.name.trim(),
@@ -187,13 +190,29 @@ export default function ProductForm({ initial, onSubmit, onCancel, submitLabel =
           </select>
           {errors.category && <span className="error">{errors.category}</span>}
         </div>
-        {input('stock', 'Quantity in stock', { type: 'number', min: 0 })}
+        <div className="field">
+          <label htmlFor="pf-condition">Condition</label>
+          <select id="pf-condition" value={form.condition} onChange={set('condition')}>
+            {conditions.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {!enquiry && input('stock', 'Quantity in stock', { type: 'number', min: 0 })}
         {input('price', 'Price (K)', { type: 'number', min: 0, step: '0.01' })}
         {input('oldPrice', 'Was-price (K), optional', { type: 'number', min: 0, step: '0.01' })}
-        {input('weightKg', 'Weight per unit (kg)', { type: 'number', min: 0, step: '0.1', placeholder: 'e.g. 0.5' })}
-        {input('lowStockAt', 'Warn me when stock falls to', { type: 'number', min: 0 })}
+        {!enquiry && input('weightKg', 'Weight per unit (kg)', { type: 'number', min: 0, step: '0.1', placeholder: 'e.g. 0.5' })}
+        {!enquiry && input('lowStockAt', 'Warn me when stock falls to', { type: 'number', min: 0 })}
       </div>
-      <p className="muted small">Weight sets the delivery price buyers see. Heavier parcels cost more.</p>
+      {enquiry ? (
+        <p className="muted small">
+          This category is a listing: buyers call or message you instead of paying online. The price is a guide.
+        </p>
+      ) : (
+        <p className="muted small">Weight sets the delivery price buyers see. Heavier parcels cost more.</p>
+      )}
 
       <div className="field">
         <label htmlFor="pf-description">Description</label>

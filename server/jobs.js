@@ -4,6 +4,7 @@ import { HttpError } from './http.js';
 import { notify, notifyShopOwner } from './notify.js';
 import { cancelShipment } from './queries.js';
 import { advanceShipment } from './routes/orders.js';
+import { autoDeliverHours, REMIND_BEFORE_HOURS } from '../src/data/couriers.js';
 import { getSettings } from './settings.js';
 
 const MOMO_PARCELS = `FROM shipments s JOIN orders o ON o.id = s.order_id JOIN shops sh ON sh.id = s.shop_id
@@ -103,29 +104,43 @@ export async function checkUnpaidOrders(db) {
   return done;
 }
 
-// Buyers confirm delivery themselves. If one never does, the parcel is marked delivered this many hours after it was
-// sent (longer when it goes to another province), so the shop is still paid. A parcel with an open problem report is left for staff to settle.
-export const AUTO_DELIVER_HOURS = 24;
-export const AUTO_DELIVER_HOURS_BETWEEN_PROVINCES = 48;
-export async function autoConfirmDelivered(
-  db,
-  hours = AUTO_DELIVER_HOURS,
-  farHours = AUTO_DELIVER_HOURS_BETWEEN_PROVINCES,
-) {
+// Buyers confirm delivery themselves. A few hours before a parcel would be marked delivered automatically, the buyer is
+// asked once whether it arrived (and told they can report a problem). If they still haven't answered when the time is up
+// (see autoDeliverHours for how long), it is marked delivered so the shop is still paid. A parcel with an open problem
+// report is left for staff to settle. Returns what was done.
+export async function autoConfirmDelivered(db) {
   const parcels = await db.query(
-    `SELECT s.order_id, s.shop_id FROM shipments s
-       JOIN orders o ON o.id = s.order_id JOIN shops sh ON sh.id = s.shop_id
+    `SELECT s.id, s.order_id, s.shop_id, s.courier, s.receipt_reminded_at, o.buyer_id, sh.name AS shop_name,
+            (o.province = sh.province) AS same_province,
+            EXTRACT(EPOCH FROM (now() - s.updated_at)) / 3600 AS age_hours
+       FROM shipments s JOIN orders o ON o.id = s.order_id JOIN shops sh ON sh.id = s.shop_id
       WHERE s.status = 'dispatched'
-        AND s.updated_at < now() - make_interval(hours => CASE WHEN o.province = sh.province THEN $1::int ELSE $2::int END)
         AND NOT EXISTS (SELECT 1 FROM cases c WHERE c.shipment_id = s.id AND c.status IN ('open', 'rejected', 'escalated'))`,
-    [hours, farHours],
   );
-  let done = 0;
+  const done = { delivered: 0, reminded: 0 };
   for (const p of parcels) {
+    const window = autoDeliverHours(p.courier, p.same_province);
     try {
-      const [shop] = await db.query('SELECT * FROM shops WHERE id = $1', [p.shop_id]);
-      await advanceShipment(db, p.order_id, shop, { status: 'delivered' }, { auto: true });
-      done += 1;
+      if (Number(p.age_hours) >= window) {
+        const [shop] = await db.query('SELECT * FROM shops WHERE id = $1', [p.shop_id]);
+        await advanceShipment(db, p.order_id, shop, { status: 'delivered' }, { auto: true });
+        done.delivered += 1;
+      } else if (Number(p.age_hours) >= window - REMIND_BEFORE_HOURS && !p.receipt_reminded_at) {
+        await db.tx(async (t) => {
+          const claimed = await t.query(
+            'UPDATE shipments SET receipt_reminded_at = now() WHERE id = $1 AND receipt_reminded_at IS NULL RETURNING id',
+            [p.id],
+          );
+          if (!claimed.length) return;
+          await notify(t, p.buyer_id, {
+            kind: 'order',
+            title: `Did your order from ${p.shop_name} arrive?`,
+            body: `Order ${p.order_id}: press "I've received it" in your orders. If something is wrong, report a problem now. Otherwise we will mark it delivered in about ${REMIND_BEFORE_HOURS} hours.`,
+            link: '/account',
+          });
+          done.reminded += 1;
+        });
+      }
     } catch (err) {
       if (!(err instanceof HttpError)) throw err;
     }
@@ -141,7 +156,7 @@ export function startJobs(db, { minutes = 10 } = {}) {
         if (d.buyersReminded || d.shopsReminded || d.cancelled) console.log('[jobs] unpaid orders:', JSON.stringify(d));
         return autoConfirmDelivered(db);
       })
-      .then((n) => n && console.log(`[jobs] ${n} parcel(s) marked delivered automatically`))
+      .then((n) => (n.delivered || n.reminded) && console.log('[jobs] parcels:', JSON.stringify(n)))
       .catch((err) => console.error(`[jobs] check failed: ${err.message}`));
   run();
   return setInterval(run, minutes * 60e3).unref();

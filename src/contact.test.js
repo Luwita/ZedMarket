@@ -33,11 +33,44 @@ test('photos under 400 pixels on the short side are flagged as small', () => {
 
 test('every category is on the categories page and opens a filtered shop list', async () => {
   const { categories } = require('./data/catalog');
-  expect(categories.length).toBeGreaterThanOrEqual(21);
+  expect(categories.length).toBeGreaterThanOrEqual(22);
   window.history.pushState({}, '', '/categories');
   render(<App />);
   for (const c of categories) {
     const links = await screen.findAllByRole('link', { name: new RegExp(c.name.replace(/[.*+?^${}()|[\]\&]/g, '\$&')) });
     expect(links.some((l) => l.getAttribute('href') === `/shop?cat=${c.id}`)).toBe(true);
   }
+});
+
+test('services, property and vehicles show "Contact seller" instead of Add to cart, and a used item is labelled', async () => {
+  const { default: ProductCard } = require('./components/ProductCard');
+  const { MemoryRouter } = require('react-router-dom');
+  const { StoreProvider } = require('./context/StoreContext');
+  const base = { id: 'x1', shopId: 's2', name: 'Solar installation', icon: '🛠️', price: 1500, tiers: [], stock: 1, images: [], weightKg: 1, options: [] };
+  const wrap = (product) => (
+    <MemoryRouter>
+      <StoreProvider>
+        <ProductCard product={product} />
+      </StoreProvider>
+    </MemoryRouter>
+  );
+  const { rerender } = render(wrap({ ...base, category: 'services' }));
+  expect(screen.getByRole('link', { name: 'Contact seller' })).toHaveAttribute('href', '/product/x1');
+  expect(screen.queryByRole('button', { name: 'Add to cart' })).not.toBeInTheDocument();
+  rerender(wrap({ ...base, category: 'phones', condition: 'used' }));
+  expect(screen.getByRole('button', { name: 'Add to cart' })).toBeInTheDocument();
+  expect(screen.getByText('Used (second-hand)')).toBeInTheDocument();
+});
+
+test('a service listing has call and message buttons and no cart', async () => {
+  api.__db().products.push({
+    id: 'svc1', shopId: 's2', name: 'Solar installation', category: 'services', icon: '🛠️', description: 'We fit panels',
+    price: 1500, tiers: [], stock: 1, sold: 0, rating: 0, reviewCount: 0, images: [], weightKg: 1, options: [], lowStockAt: 5,
+    local: false, condition: 'new', createdAt: new Date().toISOString(),
+  });
+  window.history.pushState({}, '', '/product/svc1');
+  render(<App />);
+  expect(await screen.findByText(/This is a listing, not an online purchase/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Add to cart' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Buy now' })).not.toBeInTheDocument();
 });

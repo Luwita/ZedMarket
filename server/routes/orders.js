@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { momoNetworkName } from '../../src/data/catalog.js';
+import { isEnquiryCategory, momoNetworkName } from '../../src/data/catalog.js';
 import { collectPlace } from '../../src/data/couriers.js';
 import { OrderError, priceOrder } from '../../src/data/pricing.js';
 import { requireUser } from '../auth.js';
@@ -52,6 +52,8 @@ async function priceForBuyer(q, user, body, lock) {
       [...new Set(body.items.map((i) => i.productId))],
     ])
   ).map(toProduct);
+  const enquiry = products.find((p) => isEnquiryCategory(p.category));
+  if (enquiry) throw new HttpError(409, `${enquiry.name} can't be ordered online. Contact the seller to arrange it.`);
   const shopIds = [...new Set(products.map((p) => p.shopId))];
   const shopRows = await q.query('SELECT * FROM shops WHERE id = ANY($1)', [shopIds]);
   const closed = shopRows.find((r) => !isLive(r));

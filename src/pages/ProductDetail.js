@@ -10,13 +10,14 @@ import StatusShare from '../components/StatusShare';
 import { RequestPriceForm } from '../components/PriceRequests';
 import Stars from '../components/Stars';
 import { useStore } from '../context/StoreContext';
-import { getCategory, unitPrice } from '../data/catalog';
+import { conditionName, getCategory, isEnquiryCategory, isPerishableCategory, unitPrice } from '../data/catalog';
 import { formatKg, quotesFor, tooHeavyFor } from '../data/couriers';
 import { checkChoice } from '../data/options';
 import { formatLocation } from '../data/zambia';
 import { useProduct, useProductSearch } from '../hooks/useProducts';
 import { discountPct, formatCount, formatK } from '../utils/format';
 import { distanceLabel } from '../utils/geo';
+import ContactLinks from '../components/ContactLinks';
 import Icon from '../components/Icon';
 
 function DeliveryOptions({ shop, weightKg }) {
@@ -216,6 +217,8 @@ export default function ProductDetail() {
 
   const shop = getShop(product.shopId);
   const category = getCategory(product.category);
+  const enquiry = isEnquiryCategory(product.category);
+  const secondHand = product.condition && product.condition !== 'new';
   const price = unitPrice(product, qty);
   const off = discountPct(product.price, product.oldPrice);
   const tiers = [{ min: 1, price: product.price }, ...product.tiers];
@@ -265,7 +268,13 @@ export default function ProductDetail() {
             )}
             {product.sold > 0 && <span>{formatCount(product.sold)} sold</span>}
             {product.local && <span>Made in Zambia</span>}
+            {secondHand && <span>{conditionName(product.condition)}</span>}
           </div>
+          {isPerishableCategory(product.category) && (
+            <p className="notice">
+              Fresh food: order only if you can receive or collect it soon. Check the delivery time with the seller.
+            </p>
+          )}
 
           <div className="pdp-price">
             <span className="price big">{formatK(price)}</span>
@@ -297,6 +306,22 @@ export default function ProductDetail() {
             <OptionPicker product={product} choice={choice} onChange={setChoice} showErrors={showErrors} />
           )}
 
+          {enquiry && shop ? (
+            <div className="enquiry-panel">
+              <p>
+                This is a listing, not an online purchase. Contact <strong>{shop.name}</strong> to ask questions, see it
+                and agree the price.
+              </p>
+              <div className="pdp-buttons">
+                <ContactLinks phone={shop.phone} name={shop.name} about={product.name} />
+                <AskShop shop={shop} product={product} label="Message the seller" />
+                <button className="btn btn-outline" onClick={() => toggleWishlist(product)}>
+                  {wishlist.includes(product.id) ? 'Saved' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
           <div className="qty-row">
             <label htmlFor="qty">Quantity</label>
             <div className="qty">
@@ -338,9 +363,11 @@ export default function ProductDetail() {
               {wishlist.includes(product.id) ? 'Saved' : 'Save'}
             </button>
           </div>
+            </>
+          )}
 
           <div className="pdp-buttons pdp-secondary">
-            {shop && <AskShop shop={shop} product={product} />}
+            {shop && !enquiry && <AskShop shop={shop} product={product} />}
             {product.stock >= 2 && <RequestPriceForm product={product} choice={choice} startQty={qty} />}
             <ShareButton title={product.name} text={`${product.name} for ${formatK(price)} on Zed Market`} />
             {myShop?.id === product.shopId && <StatusShare product={product} className="btn btn-outline" />}

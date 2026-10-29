@@ -62,13 +62,14 @@ const productParams = (p) => [
   JSON.stringify(p.options),
   p.lowStockAt,
   p.sourceProductId || null,
+  p.condition ?? 'new',
 ];
 
 export async function insertProduct(q, shopId, p) {
   const [row] = await q.query(
     `INSERT INTO products (id, shop_id, badge, name, category, icon, description, price, old_price, tiers, stock, local,
-                           images, weight_kg, options, low_stock_at, source_product_id)
-     VALUES ($1, $2, 'New', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
+                           images, weight_kg, options, low_stock_at, source_product_id, condition)
+     VALUES ($1, $2, 'New', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
     [newId('prd'), shopId, ...productParams(p)],
   );
   return toProduct(row);
@@ -78,7 +79,7 @@ export async function updateProduct(q, id, shopId, p) {
   const [row] = await q.query(
     `UPDATE products SET name = $3, category = $4, icon = $5, description = $6, price = $7, old_price = $8, tiers = $9,
             stock = $10, local = $11, images = $12, weight_kg = $13, options = $14, low_stock_at = $15,
-            source_product_id = COALESCE($16, source_product_id)
+            source_product_id = COALESCE($16, source_product_id), condition = $17
       WHERE id = $1 AND shop_id = $2 AND deleted_at IS NULL RETURNING *`,
     [id, shopId, ...productParams(p)],
   );
@@ -117,6 +118,8 @@ export async function searchProducts(db, f, viewerShopId = null) {
                (SELECT max(CASE WHEN strpos(lower(p.name), term) > 0 THEN 1 ELSE 0 END) FROM unnest(${terms}::text[]) term))`;
   }
   if (f.cat) where.push(`p.category = ${add(f.cat)}`);
+  if (f.cond) where.push(`p.condition = ${add(f.cond)}`);
+  if (f.secondHand) where.push(`p.condition <> 'new'`);
   if (f.prov) where.push(`sh.province = ${add(f.prov)}`);
   if (f.town) where.push(`sh.town = ${add(f.town)}`);
   if (f.shop) where.push(`p.shop_id = ${add(f.shop)}`);

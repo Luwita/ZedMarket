@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCategory } from '../data/catalog';
+import { conditionName, getCategory, isEnquiryCategory, isPerishableCategory } from '../data/catalog';
 import { bestDelivery, band } from '../data/couriers';
 import { useStore } from '../context/StoreContext';
 import Icon from './Icon';
@@ -53,6 +53,8 @@ export default function ProductCard({ product }) {
   const saved = wishlist.includes(product.id);
   const delivery = shop ? bestDelivery(shop, location, product.weightKg) : null;
   const nearby = shop && band(shop, location) === 'town';
+  const enquiry = isEnquiryCategory(product.category);
+  const secondHand = product.condition && product.condition !== 'new';
 
   return (
     <article className="card product-card">
@@ -69,6 +71,12 @@ export default function ProductCard({ product }) {
           )}
         </div>
         <h3 className="product-name">{product.name}</h3>
+        {(secondHand || isPerishableCategory(product.category)) && (
+          <div className="card-pills">
+            {secondHand && <span className="pill">{conditionName(product.condition)}</span>}
+            {isPerishableCategory(product.category) && <span className="pill pill-verified">Fresh</span>}
+          </div>
+        )}
         <div className="price-row">
           <span className="price">{formatK(product.price)}</span>
           {product.oldPrice > product.price && <span className="old-price">{formatK(product.oldPrice)}</span>}
@@ -101,13 +109,19 @@ export default function ProductCard({ product }) {
         </div>
       </Link>
       <div className="card-actions">
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={() => (needsChoice ? navigate(`/product/${product.id}`) : addToCart(product))}
-          disabled={!product.stock}
-        >
-          {!product.stock ? 'Sold out' : needsChoice ? 'Choose options' : 'Add to cart'}
-        </button>
+        {enquiry ? (
+          <Link className="btn btn-primary btn-sm" to={`/product/${product.id}`}>
+            Contact seller
+          </Link>
+        ) : (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => (needsChoice ? navigate(`/product/${product.id}`) : addToCart(product))}
+            disabled={!product.stock}
+          >
+            {!product.stock ? 'Sold out' : needsChoice ? 'Choose options' : 'Add to cart'}
+          </button>
+        )}
         <button
           className={`icon-btn heart ${saved ? 'on' : ''}`}
           aria-label={saved ? 'Remove from saved' : 'Save item'}

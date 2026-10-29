@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../api';
-import { unitPrice } from '../data/catalog';
+import { isEnquiryCategory, unitPrice } from '../data/catalog';
 import { describeChoice, lineKey } from '../data/options';
 import { DEFAULT_LOCATION } from '../data/zambia';
 import { applyDeliveryConfig } from '../data/delivery';
@@ -258,6 +258,10 @@ export function StoreProvider({ children }) {
       wholesaleSavings: retailTotal - subtotal,
       cartCount: items.reduce((n, i) => n + i.qty, 0),
       addToCart(product, qty = 1, options = {}) {
+        if (isEnquiryCategory(product.category)) {
+          setToast('This is a listing. Contact the seller to arrange it.');
+          return;
+        }
         remember([product]);
         const key = cartKey({ id: product.id, options });
         setCart((prev) => {

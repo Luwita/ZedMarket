@@ -18,6 +18,7 @@ export default function Shop({ wholesale = false }) {
   const prov = params.get('prov') ?? '';
   const town = params.get('town') ?? '';
   const local = params.get('local') === '1';
+  const secondHand = params.get('secondHand') === '1';
   const sort = params.get('sort') ?? (q ? 'relevance' : 'nearest');
   const max = Number(params.get('max')) || 0;
 
@@ -34,6 +35,7 @@ export default function Shop({ wholesale = false }) {
     prov,
     town,
     local: local ? '1' : '',
+    secondHand: secondHand ? '1' : '',
     max: max || '',
     wholesale: wholesale ? '1' : '',
     sort,
@@ -52,7 +54,7 @@ export default function Shop({ wholesale = false }) {
         ? getCategory(cat)?.name
         : 'All products';
   const isNearMe = prov === location.province && town === location.town;
-  const filterCount = [cat, prov, max, local].filter(Boolean).length;
+  const filterCount = [cat, prov, max, local, secondHand].filter(Boolean).length;
 
   return (
     <div className="container shop">
@@ -133,8 +135,16 @@ export default function Shop({ wholesale = false }) {
             <input type="checkbox" checked={local} onChange={(e) => update({ local: e.target.checked ? '1' : '' })} />
             Made in Zambia only
           </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={secondHand}
+              onChange={(e) => update({ secondHand: e.target.checked ? '1' : '' })}
+            />
+            Second-hand and refurbished only
+          </label>
 
-          {(cat || prov || max || q || local) && (
+          {(cat || prov || max || q || local || secondHand) && (
             <Link to={wholesale ? '/wholesale' : '/shop'} className="btn btn-outline btn-sm btn-block">
               Clear filters
             </Link>

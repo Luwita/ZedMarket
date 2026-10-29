@@ -1,6 +1,6 @@
 // In-memory stand-in for src/api.js used by the React tests (see setupTests.js).
 // It mirrors the server's behaviour closely enough to drive the UI; the real rules are tested in server/api.test.js.
-import { categories, momoNetworkName, seedProducts } from '../data/catalog';
+import { categories, isEnquiryCategory, momoNetworkName, seedProducts } from '../data/catalog';
 import { band, bandRank } from '../data/couriers';
 import { priceOrder, OrderError } from '../data/pricing';
 import { expandSearch } from '../data/search';
@@ -243,6 +243,8 @@ export async function searchProducts(f = {}) {
       (!f.town || shop.town === f.town) &&
       (!f.shop || p.shopId === f.shop) &&
       (!f.local || p.local) &&
+      (!f.secondHand || (p.condition ?? 'new') !== 'new') &&
+      (!f.cond || (p.condition ?? 'new') === f.cond) &&
       (!f.wholesale || p.tiers.length > 0) &&
       (!f.lowStock || p.stock <= p.lowStockAt) &&
       (!f.featured || (p.featuredUntil && new Date(p.featuredUntil) > new Date())) &&
@@ -311,6 +313,7 @@ export async function createProduct(data) {
     id: `prd_${db.products.length + 1}`,
     shopId: shop.id,
     icon: categories.find((c) => c.id === data.category)?.icon,
+    condition: 'new',
     sold: 0,
     rating: 0,
     reviewCount: 0,
@@ -441,6 +444,8 @@ function priceFor(user, { items, shipping, couriers, payment, coupon, voucherId,
       .map((r) => [r.id, { productId: r.productId, qty: r.qty, price: r.quotedPrice }]),
   );
   try {
+    const enquiry = items.map((i) => db.products.find((p) => p.id === i.productId)).find((p) => p && isEnquiryCategory(p.category));
+    if (enquiry) throw new ApiError(409, `${enquiry.name} can't be ordered online. Contact the seller to arrange it.`);
     return priceOrder({
       lines: items,
       getProduct: (id) => db.products.find((p) => p.id === id && !p.deletedAt),

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { categories } from '../data/catalog';
+import { categories, categoryAliases } from '../data/catalog';
 import { downloadCsv, parseCsv } from '../utils/csv';
 import { formatK } from '../utils/format';
 
@@ -25,7 +25,7 @@ const EXAMPLE_ROWS = [
 
 const findCategory = (value) => {
   const v = value.trim().toLowerCase();
-  return categories.find((c) => c.id === v || c.name.toLowerCase() === v)?.id ?? v;
+  return categories.find((c) => c.id === v || c.name.toLowerCase() === v)?.id ?? categoryAliases[v] ?? v;
 };
 
 // "10:90; 50:80" -> [{ min: 10, price: 90 }, { min: 50, price: 80 }]

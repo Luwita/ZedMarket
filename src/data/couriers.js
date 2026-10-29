@@ -203,6 +203,16 @@ export function quotesFor(shop, to, weightKg = 1) {
 export const bestDelivery = (shop, to, weightKg = 1) =>
   quotesFor(shop, to, weightKg).find((q) => q.courier.id !== 'pickup') ?? null;
 
+// How long after a parcel is sent it is marked delivered automatically, if the buyer never presses "I've received it".
+// Delivered to the door: 24 hours inside the shop's province, 48 to another province. Parcels the buyer has to collect
+// themselves (from the shop, a bus station, a courier or post office, or a Zed Market Point) get a day more.
+export const AUTO_DELIVER_HOURS = { near: 24, far: 48, collectExtra: 24 };
+export const REMIND_BEFORE_HOURS = 6;
+export function autoDeliverHours(courierId, sameProvince) {
+  const collects = courierId === 'pickup' || !!collectPlace(courierId) || courierId === 'point';
+  return (sameProvince ? AUTO_DELIVER_HOURS.near : AUTO_DELIVER_HOURS.far) + (collects ? AUTO_DELIVER_HOURS.collectExtra : 0);
+}
+
 // Where the buyer collects a parcel, for couriers that don't deliver to the door (e.g. "post office"), or null.
 export const collectPlace = (courierId) => getCourier(courierId)?.collect ?? null;
 

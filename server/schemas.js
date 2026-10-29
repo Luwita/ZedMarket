@@ -1,6 +1,6 @@
 // Request validation shared by the API routes.
 import { z } from 'zod';
-import { categories, momoNetworks } from '../src/data/catalog.js';
+import { categories, conditions, momoNetworks } from '../src/data/catalog.js';
 import { couriers } from '../src/data/couriers.js';
 import { getProvince } from '../src/data/zambia.js';
 
@@ -69,6 +69,7 @@ export const productSchema = z
   .object({
     name: z.string().trim().min(2, 'Enter a product name').max(140),
     category: z.enum(CATEGORY_IDS, { message: 'Choose a category' }),
+    condition: z.enum(conditions.map((c) => c.id)).default('new'),
     price: money,
     oldPrice: money.optional().nullable(),
     stock: z.coerce.number().int('Stock must be a whole number').min(0).max(1_000_000),
@@ -193,6 +194,8 @@ export const SORTS = ['relevance', 'nearest', 'popular', 'newest', 'deals', 'pri
 export const searchSchema = z.object({
   q: z.string().trim().max(100).optional(),
   cat: blank(z.enum(CATEGORY_IDS)),
+  cond: blank(z.enum(conditions.map((c) => c.id))),
+  secondHand: flag,
   prov: blank(z.string().max(30)),
   town: blank(z.string().max(40)),
   shop: blank(z.string().max(40)),
