@@ -15,6 +15,16 @@ export const categories = [
   { id: 'baby', name: 'Baby & Kids', icon: '🧸', color: '#fb8c00' },
   { id: 'grocery', name: 'Groceries', icon: '🛒', color: '#43a047' },
   { id: 'office', name: 'Office & School', icon: '🎒', color: '#3949ab' },
+  { id: 'furniture', name: 'Furniture & Décor', icon: '🛋️', color: '#8d6e63' },
+  { id: 'sports', name: 'Sports & Fitness', icon: '⚽', color: '#2e7d32' },
+  { id: 'books', name: 'Books & Stationery', icon: '📚', color: '#5c6bc0' },
+  { id: 'pets', name: 'Pets & Livestock Supplies', icon: '🐾', color: '#ef6c00' },
+  { id: 'jewellery', name: 'Jewellery & Watches', icon: '⌚', color: '#c2185b' },
+  { id: 'bags', name: 'Bags, Shoes & Luggage', icon: '👜', color: '#6a1b9a' },
+  { id: 'music', name: 'Music & Entertainment', icon: '🎸', color: '#00838f' },
+  { id: 'gaming', name: 'Gaming', icon: '🎮', color: '#283593' },
+  { id: 'crafts', name: 'Crafts & Local Art', icon: '🧺', color: '#bf360c' },
+  { id: 'cleaning', name: 'Cleaning & Household', icon: '🧼', color: '#0288d1' },
 ];
 
 const raw = [
