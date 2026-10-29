@@ -21,13 +21,14 @@ import { sellerRoutes } from './routes/seller.js';
 import { adminToolRoutes, bannerRoutes } from './routes/adminTools.js';
 import { adminControlRoutes } from './routes/adminControl.js';
 import { getSettings } from './settings.js';
+import { sendNotificationsByEmail } from './notify.js';
 import { deliveryAdminRoutes, deliveryRoutes } from './routes/delivery.js';
 
 // `auth`: Clerk settings. `secretKey` is the CLERK_SECRET_KEY; tests pass their own `verifyToken`, `lookupPhone` and
 // `deleteIdentity` instead.
 export function createApp(
   db,
-  { uploadDir, buildDir, adminPhones = [], adminEmails = [], production = false, auth = {} } = {},
+  { uploadDir, buildDir, email, siteUrl = '', adminPhones = [], adminEmails = [], production = false, auth = {} } = {},
 ) {
   const {
     secretKey,
@@ -35,6 +36,7 @@ export function createApp(
     lookupPhone,
     deleteIdentity = secretKey ? clerkDeleteIdentity({ secretKey }) : async () => {},
   } = auth;
+  sendNotificationsByEmail(email ?? null, siteUrl);
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // behind the host's HTTPS proxy, so links use https

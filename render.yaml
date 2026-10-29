@@ -29,6 +29,11 @@ services:
       - key: REACT_APP_CLERK_PUBLISHABLE_KEY
         sync: false
       # Owners: the email addresses they sign in with, comma-separated (verified by Clerk).
+      # Order alerts by email (Resend). Optional: without them alerts stay in the app only.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
       # The value is kept in Render (Environment), not here, because this repository is public.
       - key: ADMIN_EMAILS
         sync: false

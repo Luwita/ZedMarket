@@ -27,3 +27,30 @@ export function compressImage(file, maxSize = 640, quality = 0.75) {
     reader.readAsDataURL(file);
   });
 }
+
+// The width and height of a photo before it is shrunk, or null if the browser can't tell within a second.
+export function measureImage(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL?.(file);
+    if (!url) return resolve(null);
+    const img = new Image();
+    const done = (size) => {
+      URL.revokeObjectURL?.(url);
+      resolve(size);
+    };
+    const timer = setTimeout(() => done(null), 1000);
+    img.onload = () => {
+      clearTimeout(timer);
+      done({ width: img.width, height: img.height });
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      done(null);
+    };
+    img.src = url;
+  });
+}
+
+// Photos shorter than this on their short side look blurry on a phone screen.
+export const MIN_PHOTO_SIDE = 400;
+export const isSmallPhoto = (size) => !!size && Math.min(size.width, size.height) < MIN_PHOTO_SIDE;

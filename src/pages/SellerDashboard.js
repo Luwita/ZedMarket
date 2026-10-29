@@ -7,6 +7,7 @@ import { ShopPriceRequests } from '../components/PriceRequests';
 import VerificationPanel, { ShopNotices } from '../components/Verification';
 import Promotions from '../components/Promotions';
 import { QrCard } from '../components/AdminQr';
+import ContactLinks from '../components/ContactLinks';
 import { ProductImage } from '../components/ProductCard';
 import ProductForm from '../components/ProductForm';
 import { SalesReport, ShopReviews } from '../components/SellerInsights';
@@ -123,7 +124,8 @@ function OrderCard({ order, shipment }) {
         ))}
       </div>
       <div className="small muted">
-        {order.buyer.name} · {order.buyer.phone} · <Icon name="pin" size={14} className="inline-icon" />{order.shipping.address}, {formatLocation(order.shipping)}
+        {order.buyer.name} · {order.buyer.phone}{' '}
+        <ContactLinks phone={order.buyer.phone} name={order.buyer.name} about={`order ${order.id}`} /> · <Icon name="pin" size={14} className="inline-icon" />{order.shipping.address}, {formatLocation(order.shipping)}
         {order.shipping.lat != null && (
           <>
             {' '}

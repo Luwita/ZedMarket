@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { categories } from '../data/catalog';
-import { compressImage } from '../utils/image';
+import { MIN_PHOTO_SIDE, compressImage, isSmallPhoto, measureImage } from '../utils/image';
 
 const MAX_PHOTOS = 4;
 
@@ -31,6 +31,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, submitLabel =
   }));
   const [errors, setErrors] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [photoNote, setPhotoNote] = useState(null);
   const [saving, setSaving] = useState(false);
   const set = (k) => (e) =>
     setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
@@ -42,6 +43,12 @@ export default function ProductForm({ initial, onSubmit, onCancel, submitLabel =
     setUploading(true);
     try {
       const images = await Promise.all(files.map((f) => compressImage(f)));
+      const sizes = await Promise.all(files.map((f) => measureImage(f)));
+      setPhotoNote(
+        sizes.some(isSmallPhoto)
+          ? `A photo is small (under ${MIN_PHOTO_SIDE} pixels) and may look blurry. Take it closer to a window, with the phone's camera, not a screenshot.`
+          : null,
+      );
       setForm((f) => ({ ...f, images: [...f.images, ...images].slice(0, MAX_PHOTOS) }));
       setErrors((er) => ({ ...er, images: undefined }));
     } catch (err) {
@@ -158,6 +165,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, submitLabel =
           )}
         </div>
         {errors.images && <span className="error">{errors.images}</span>}
+        {photoNote && <span className="muted small">{photoNote}</span>}
       </div>
 
       {input('name', 'Product name', { placeholder: 'e.g. 200W Solar Panel' })}

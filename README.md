@@ -352,8 +352,10 @@ the dashboard.
 ## Still to do before launch
 
 - **Commission account:** save the Mobile Money number shops send their commission to in Admin → Payouts.
-- **Text or WhatsApp copies of notifications**: notifications are in the app only. Texts or WhatsApp (a WhatsApp
-  Business account) can be added later.
+- **Email alerts:** new orders, Mobile Money payments, dispatches, cancellations, returns, refunds, payouts, quotes
+  and shop decisions are also emailed, once you create a free [Resend](https://resend.com) account, verify a sending
+  domain, and set `RESEND_API_KEY`, `EMAIL_FROM` and `SITE_URL` (on Render). Without them alerts stay in the app.
+  Vouchers, announcements and support replies are never emailed. Text or WhatsApp copies would need a provider later.
 - **Legal review:** the pages under `/legal` are drafts and must be reviewed by a Zambian lawyer. Register with the
   Office of the Data Protection Commissioner as required.
 - **Tax:** receipts are not ZRA Smart Invoices. Shops that must issue fiscal invoices still need to do so, and

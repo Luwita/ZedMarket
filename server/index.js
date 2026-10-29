@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
 import { cleanDatabaseUrl, createDb, migrate } from './db.js';
 import { loadDelivery } from './delivery.js';
+import { emailFromEnv } from './email.js';
 import { startJobs } from './jobs.js';
 import { backfillDemoProducts, seedIfEmpty } from './seed.js';
 
@@ -50,12 +51,16 @@ if (production && !clerkSecretKey) {
   process.exit(1);
 }
 if (!clerkSecretKey) console.warn('[auth] CLERK_SECRET_KEY is not set: nobody can sign in.');
+const email = emailFromEnv();
 const list = (v) =>
   (v ?? '')
     .split(',')
     .map((p) => p.trim())
     .filter(Boolean);
 const app = createApp(db, {
+  email,
+  // The public address of the site, used for "open it" links in emails, e.g. https://zedmarket.onrender.com
+  siteUrl: process.env.SITE_URL?.trim() ?? process.env.RENDER_EXTERNAL_URL ?? '',
   uploadDir: process.env.UPLOAD_DIR ?? path.join(root, 'server', '.data', 'uploads'),
   buildDir: path.join(root, 'build'),
   // Owners, by verified email address, e.g. ADMIN_EMAILS=me@example.com
@@ -69,6 +74,6 @@ startJobs(db);
 
 app.listen(port, () =>
   console.log(
-    `Zed Market API on http://localhost:${port} (database: ${db.kind}${db.location ? ` in ${db.location}` : ''})`,
+    `Zed Market API on http://localhost:${port} (database: ${db.kind}${db.location ? ` in ${db.location}` : ''}; email: ${email.provider})`,
   ),
 );

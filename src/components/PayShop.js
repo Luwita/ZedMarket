@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as api from '../api';
+import ContactLinks from './ContactLinks';
 import { useStore } from '../context/StoreContext';
 import { formatK } from '../utils/format';
 
@@ -38,7 +39,8 @@ export default function PayShop({ order, shipment }) {
       <p className="pay-shop small">
         ⏳ You told {shipment.shopName} you sent {formatK(shipment.due)}
         {shipment.paymentRef && ` (transaction ID ${shipment.paymentRef})`}. They send your parcel as soon as the money
-        shows on their phone. Not confirmed after a few hours? Call the shop on {shipment.shopPhone}.
+        shows on their phone. Not confirmed after a few hours? Call the shop on {shipment.shopPhone}.{' '}
+        <ContactLinks phone={shipment.shopPhone} about={`order ${order.id}`} />
       </p>
     );
   }
@@ -76,6 +78,9 @@ export default function PayShop({ order, shipment }) {
       <p className="muted small">
         Check the name on your phone matches before you approve. The shop sends your parcel once the money arrives.
         {hours ? ` Orders not paid within ${hours} hours are cancelled.` : ''}
+      </p>
+      <p className="small">
+        Need help? <ContactLinks phone={shipment.shopPhone} about={`order ${order.id}`} />
       </p>
       <div className="inline-fields">
         <input

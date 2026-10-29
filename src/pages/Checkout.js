@@ -15,17 +15,26 @@ import Icon from '../components/Icon';
 
 const PHONE = /^(\+?260|0)?[79]\d{8}$/;
 
+// The name, phone and address of the last order on this device, so repeat buyers don't retype them.
+const SAVED = 'zedmarket.delivery';
+const savedDelivery = () => {
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVED) ?? '{}');
+    return { name: d.name ?? '', phone: d.phone ?? '', address: d.address ?? '' };
+  } catch {
+    return { name: '', phone: '', address: '' };
+  }
+};
+
 export default function Checkout() {
   const { selectedItems: items, subtotal, user, authReady, catalogStatus, cartStatus, location, placeOrder } = useStore();
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
+  const [form, setForm] = useState(() => ({
+    ...savedDelivery(),
     province: location.province,
     town: location.town,
-    address: '',
     payment: 'momo',
-  });
+  }));
   const [picked, setPicked] = useState({}); // shopId -> courier id
   const [errors, setErrors] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -207,6 +216,11 @@ export default function Checkout() {
         coupon: coupon?.code,
         voucherId: voucherId || undefined,
       });
+      try {
+        localStorage.setItem(SAVED, JSON.stringify({ name: form.name, phone: form.phone, address: form.address }));
+      } catch {
+        // storage unavailable (private mode): the next order just starts empty
+      }
       navigate(`/order/${order.id}`, { replace: true, state: { order } });
     } catch (err) {
       setErrors({ submit: err.message });
