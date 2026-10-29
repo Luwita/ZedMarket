@@ -391,3 +391,205 @@ h3 {
     padding-top: 0;
   }
 }
+
+/* ---------- Text ---------- */
+body {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+h1 {
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  font-weight: 800;
+  line-height: 1.15;
+}
+h2 {
+  font-weight: 700;
+}
+.muted {
+  color: #667085;
+}
+.small {
+  line-height: 1.5;
+}
+.section-head {
+  align-items: baseline;
+}
+.link {
+  font-weight: 600;
+}
+
+/* ---------- Profile and dashboard headers ---------- */
+.account-head,
+.dash-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
+  margin-bottom: 20px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #ffffff 55%, var(--primary-soft));
+}
+.account-head h1,
+.dash-head h1 {
+  margin: 0 0 4px;
+  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+}
+.account-head p,
+.dash-head p {
+  margin: 0;
+}
+.account-head .grow,
+.dash-head .grow {
+  min-width: 0;
+}
+.avatar {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #12896a, var(--primary-dark));
+  box-shadow: 0 6px 16px rgba(8, 82, 63, 0.25);
+}
+.dash-head .shop-logo.lg {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  font-size: 2rem;
+}
+
+/* Numbers at the top of the dashboards. */
+.stats {
+  gap: 10px;
+}
+.stats div {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 18px;
+  min-width: 104px;
+  align-items: flex-start;
+  box-shadow: var(--shadow);
+}
+.stats strong {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--primary-dark);
+}
+.stats span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------- Tabs become pills ---------- */
+.tabs {
+  gap: 6px;
+  border-bottom: 0;
+  margin-bottom: 18px;
+  padding-bottom: 2px;
+}
+.tabs button {
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  margin-bottom: 0;
+  font-size: 0.88rem;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.tabs button:hover {
+  border-color: #cfd4dc;
+}
+.tabs button.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* ---------- Dashboard menu ---------- */
+.dash-nav {
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.dash-nav-label {
+  letter-spacing: 0.08em;
+}
+.dash-nav button {
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+}
+.dash-nav button.on {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(8, 82, 63, 0.25);
+}
+.dash-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+/* ---------- Orders and tables ---------- */
+.order {
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.order-shipment {
+  background: #fafbfc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.table {
+  border-radius: var(--radius-sm);
+}
+.table th {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #667085;
+}
+.status {
+  border-radius: 999px;
+  font-weight: 600;
+}
+.empty {
+  padding: 36px 20px;
+  border-radius: var(--radius);
+  border: 1px dashed #d5d9e0;
+  box-shadow: none;
+}
+
+@media (max-width: 820px) {
+  .account-head,
+  .dash-head {
+    padding: 16px;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .avatar,
+  .dash-head .shop-logo.lg {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    font-size: 1.4rem;
+  }
+  .stats {
+    width: 100%;
+  }
+  .stats div {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+  }
+  .account-head .pdp-buttons {
+    width: 100%;
+  }
+}

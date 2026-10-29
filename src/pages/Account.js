@@ -288,8 +288,13 @@ export default function Account() {
 
   return (
     <div className="container section">
-      <div className="account-head">
-        <div>
+      <div className="account-head card">
+        {user && (
+          <span className="avatar" aria-hidden="true">
+            {(user.name || '?').trim().charAt(0).toUpperCase()}
+          </span>
+        )}
+        <div className="grow">
           <h1>{user ? `Muli shani, ${user.name.split(' ')[0]}` : 'My account'}</h1>
           <p className="muted">
             {user &&

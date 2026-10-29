@@ -5,7 +5,7 @@
  *  - Anything signed in (orders, messages, checkout): never cached.
  * Bump VERSION to clear old caches after changing this file.
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const APP_CACHE = `zed-market-app-${VERSION}`;
 const DATA_CACHE = `zed-market-data-${VERSION}`;
 const DATA_LIMIT = 150; // cached API responses kept for offline browsing

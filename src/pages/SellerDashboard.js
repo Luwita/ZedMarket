@@ -477,7 +477,7 @@ export default function SellerDashboard() {
   return (
     <div className="container section">
       <div className="dash-head card">
-        <span className="shop-logo">{myShop.logo ?? '🏪'}</span>
+        <span className="shop-logo lg">{myShop.logo ?? '🏪'}</span>
         <div className="grow">
           <h1>{myShop.name}</h1>
           <p className="muted">
